@@ -1,10 +1,10 @@
 import { fileURLToPath, URL } from 'node:url';
-import { defineConfig } from 'vitest/config';
-import vue from '@vitejs/plugin-vue';
 import path from 'node:path';
+import { defineConfig } from 'vitest/config';
+import react from '@vitejs/plugin-react';
 
 export default defineConfig({
-  plugins: [vue()],
+  plugins: [react()],
   resolve: {
     alias: {
       'stripper': path.resolve(__dirname, '../../packages/stripper/src/index.ts'),
@@ -13,7 +13,8 @@ export default defineConfig({
   },
   test: {
     environment: 'happy-dom',
-    include: ['test/**/*.spec.ts'],
+    globals: true,
+    include: ['test/**/*.spec.ts', 'test/**/*.spec.tsx'],
     coverage: {
       provider: 'v8',
       include: ['src/**'],

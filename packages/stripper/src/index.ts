@@ -11,4 +11,3 @@ export { resolveLadderAnchorStep } from './anchor-resolution';
 export type { LadderBoundary } from './ladder';
 export * from './contrast';
 export * from './export';
-export * from './presets';

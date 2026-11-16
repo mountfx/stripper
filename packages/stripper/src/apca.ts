@@ -14,7 +14,7 @@
  * is intentionally NOT shipped; it is only used as a dev-time test oracle.
  *
  * Copyright for the algorithm: Andrew Somers / Myndex Research.
- * This file: Konverto Lab, independent implementation for commercial use.
+ * This file: independent implementation for commercial use.
  */
 import { parse, converter } from 'culori';
 

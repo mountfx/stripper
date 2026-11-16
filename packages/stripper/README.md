@@ -253,8 +253,9 @@ application-layer export — the engine intentionally does not retain configs on
 ## Presets & data
 
 ```ts
-KONVERTO_PRESET            // the exact provided Konverto Lab scales (holly / electric-violet)
 TAILWIND_FAMILIES          // 22 Tailwind v4 families, hex per step
+scaleFromFamily(family)    // exact Scale from a family (anchored at 500)
+familyById(id)             // 'blue' -> Blue family
 CHROMATIC_PROFILE / GRAY_PROFILE   // averaged OKLCH L/C curves per step (FamilyProfile)
 GRAY_FAMILY_NAMES          // Slate/Gray/Zinc/Neutral/Stone
 SCALE_STEPS                // [50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950]
@@ -312,5 +313,4 @@ stepIndex(step): number
 `pnpm test` — golden-value parity of the APCA implementation against the
 canonical `apca-w3` oracle, APCA ladder adherence (±2 Lc), WCAG ladder adherence
 (±0.1 ratio), multi-anchor pin/transition/conflict behavior, gamut safety, and
-export snapshots. The hand-tuned Konverto preset ships as exact hex values and is
-not expected to be reproduced by the generator.
+export snapshots.

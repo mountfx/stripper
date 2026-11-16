@@ -1,6 +1,6 @@
 /**
  * Pure chart geometry math: monotone splines, gamut-aware lightness/hue
- * intervals, and region tracing. No Vue coupling — fully unit-testable.
+ * intervals, and region tracing. No framework coupling — fully unit-testable.
  */
 import { inGamut } from 'culori';
 

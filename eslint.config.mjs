@@ -1,28 +1,16 @@
-import vue from 'eslint-plugin-vue';
-import vueTsConfigs from '@vue/eslint-config-typescript';
 import globals from 'globals';
+import tseslint from 'typescript-eslint';
+import reactHooks from 'eslint-plugin-react-hooks';
 
-export default [
+export default tseslint.config(
   {
-    ignores: ['**/dist/**', '**/coverage/**', '**/node_modules/**', 'packages/palette-engine/src/families.ts'],
+    ignores: ['**/dist/**', '**/coverage/**', '**/node_modules/**'],
   },
-  ...vue.configs['flat/essential'],
-  ...vueTsConfigs(),
-  {
-    // vendored shadcn-vue components use single-word names by convention
-    files: ['apps/stripper-studio/src/components/ui/**/*.vue'],
-    rules: { 'vue/multi-word-component-names': 'off' },
-  },
+  ...tseslint.configs.recommended,
+  reactHooks.configs.flat['recommended-latest'],
   {
     languageOptions: {
       globals: { ...globals.browser },
     },
-    rules: {
-      // formatting is intentionally not linted (add a formatter later if wanted)
-      'vue/max-attributes-per-line': 'off',
-      'vue/singleline-html-element-content-newline': 'off',
-      'vue/html-indent': 'off',
-      'vue/html-self-closing': 'off',
-    },
   },
-];
+);

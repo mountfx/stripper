@@ -4,12 +4,8 @@ import { resolveLadderAnchorStep } from '../src/anchor-resolution';
 
 import { stepLc } from './helpers';
 import { targetFor } from '../src/targets';
-import { SCALE_STEPS, type Oklch, type ScaleStepNumber } from '../src/types';
+import { SCALE_STEPS, type Oklch } from '../src/types';
 import { parse, converter } from 'culori';
-import { KONVERTO_PRESET } from '../src/presets';
-
-const KONVERTO_PRIMARY = KONVERTO_PRESET.primary.steps;
-const KONVERTO_NEUTRAL = KONVERTO_PRESET.neutral.steps;
 
 function engineOklch(hex: string): Oklch {
   const c = toOklch(parse(hex)!);
@@ -41,17 +37,6 @@ describe('generateScale — tailwindTransfer + APCA (uicolors parity)', () => {
 
   it('picks the violet family for a violet input', () => {
     expect(scale.closestFamily).toBe('Violet');
-  });
-
-  it('electric-violet benchmark: APCA Lc within ±4.5 of the Konverto scale per step', () => {
-    // The hand-tuned Konverto scale deviates from the uicolors target table by up to
-    // ~4 Lc (e.g. step 400 is -63.7 vs the -60 target); generated scales hit the
-    // targets themselves within ±2 (tested separately), so ±4.5 covers the drift.
-    for (const step of scale.steps) {
-      const generated = stepLc(step.hex, step.number);
-      const konverto = stepLc(KONVERTO_PRIMARY[step.number]!, step.number);
-      expect(Math.abs(generated - konverto), `step ${step.number}`).toBeLessThanOrEqual(4.5);
-    }
   });
 
   it('hits the APCA target table within ±2 Lc per step', () => {
@@ -133,28 +118,6 @@ describe('error and edge-case handling', () => {
     const inputOk = engineOklch('#a286fd');
     const step = resolveLadderAnchorStep(inputOk, { ...defaultConfig(), contrastMode: 'none' });
     expect(SCALE_STEPS).toContain(step);
-  });
-});
-
-describe('Konverto scale analysis (documented behavior)', () => {
-  it('electric-violet matches the APCA target table within ±4 Lc', () => {
-    for (const stepText of Object.keys(KONVERTO_PRIMARY)) {
-      const step = Number(stepText) as ScaleStepNumber;
-      const target = targetFor(step);
-      const value = stepLc(KONVERTO_PRIMARY[step]!, step);
-      expect(Math.abs(value - target.lc), `step ${step}`).toBeLessThanOrEqual(4);
-    }
-  });
-
-  it('holly does NOT follow the APCA table (shipped as exact preset instead)', () => {
-    let deviations = 0;
-    for (const stepText of Object.keys(KONVERTO_NEUTRAL)) {
-      const step = Number(stepText) as ScaleStepNumber;
-      const target = targetFor(step);
-      const value = stepLc(KONVERTO_NEUTRAL[step]!, step);
-      if (Math.abs(value - target.lc) > 4) deviations++;
-    }
-    expect(deviations).toBeGreaterThan(3);
   });
 });
 

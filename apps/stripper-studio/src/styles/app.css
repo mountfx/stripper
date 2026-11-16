@@ -1,7 +1,36 @@
 @import 'tailwindcss';
-@import 'tw-animate-css';
 
 @custom-variant dark (&:is(.dark *));
+
+/*
+ * Fixed UI color scheme: the studio UI does NOT react to the scales the user
+ * generates — it always uses this achromatic ramp. `neutral-*` overrides the
+ * Tailwind default family, `primary-*` is available for accents.
+ */
+@theme {
+  --color-primary-50: oklch(98.5% 0.000 0.0);
+  --color-primary-100: oklch(96.9% 0.000 0.0);
+  --color-primary-200: oklch(92.4% 0.000 0.0);
+  --color-primary-300: oklch(87.0% 0.000 0.0);
+  --color-primary-400: oklch(71.4% 0.000 0.0);
+  --color-primary-500: oklch(55.3% 0.000 0.0);
+  --color-primary-600: oklch(44.3% 0.000 0.0);
+  --color-primary-700: oklch(37.2% 0.000 0.0);
+  --color-primary-800: oklch(27.4% 0.000 0.0);
+  --color-primary-900: oklch(21.0% 0.000 0.0);
+  --color-primary-950: oklch(0.0% 0.000 0.0);
+  --color-neutral-50: oklch(98.5% 0.000 0.0);
+  --color-neutral-100: oklch(97.0% 0.000 0.0);
+  --color-neutral-200: oklch(92.5% 0.000 0.0);
+  --color-neutral-300: oklch(87.6% 0.000 0.0);
+  --color-neutral-400: oklch(72.2% 0.000 0.0);
+  --color-neutral-500: oklch(56.6% 0.000 0.0);
+  --color-neutral-600: oklch(45.7% 0.000 0.0);
+  --color-neutral-700: oklch(38.3% 0.000 0.0);
+  --color-neutral-800: oklch(28.1% 0.000 0.0);
+  --color-neutral-900: oklch(21.8% 0.000 0.0);
+  --color-neutral-950: oklch(0.0% 0.000 0.0);
+}
 
 html {
   color-scheme: light;
@@ -10,59 +39,68 @@ html.dark {
   color-scheme: dark;
 }
 
+/*
+ * Semantic tokens (shadcn set) mapped onto the fixed achromatic ramps.
+ * All light/dark switching happens here — components use token utilities
+ * (bg-background, text-muted-foreground, border-border, …) exclusively.
+ * `--border` is the strong Base UI-style border (foreground-colored).
+ */
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
+  --background: white;
+  --foreground: var(--color-neutral-950);
+  --card: white;
+  --card-foreground: var(--color-neutral-950);
+  --popover: white;
+  --popover-foreground: var(--color-neutral-950);
+  --primary: var(--color-neutral-950);
+  --primary-foreground: white;
+  --secondary: var(--color-neutral-100);
+  --secondary-foreground: var(--color-neutral-900);
+  --muted: var(--color-neutral-100);
+  --muted-foreground: var(--color-neutral-500);
+  --accent: var(--color-neutral-100);
+  --accent-foreground: var(--color-neutral-900);
   --destructive: oklch(0.577 0.245 27.325);
   --destructive-foreground: oklch(0.985 0 0);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
-  --radius: 0rem;
+  --border: var(--color-neutral-200);
+  --input: var(--color-neutral-300);
+  --ring: var(--color-neutral-950);
+  --chart-1: var(--color-primary-600);
+  --chart-2: var(--color-primary-400);
+  --chart-3: var(--color-primary-800);
+  --chart-4: var(--color-primary-300);
+  --chart-5: var(--color-primary-700);
+  /* chart constraint-region hatch: the line sits slightly below its light plot background */
+  --chart-stroke: var(--color-neutral-200);
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.269 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
+  --background: var(--color-neutral-950);
+  --foreground: white;
+  --card: var(--color-neutral-950);
+  --card-foreground: white;
+  --popover: var(--color-neutral-950);
+  --popover-foreground: white;
+  --primary: white;
+  --primary-foreground: var(--color-neutral-950);
+  --secondary: var(--color-neutral-800);
+  --secondary-foreground: var(--color-neutral-100);
+  --muted: var(--color-neutral-900);
+  --muted-foreground: var(--color-neutral-400);
+  --accent: var(--color-neutral-800);
+  --accent-foreground: var(--color-neutral-100);
   --destructive: oklch(0.704 0.191 22.216);
   --destructive-foreground: oklch(0.985 0 0);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
+  --border: var(--color-neutral-800);
+  --input: var(--color-neutral-700);
+  --ring: white;
+  --chart-1: var(--color-primary-400);
+  --chart-2: var(--color-primary-600);
+  --chart-3: var(--color-primary-300);
+  --chart-4: var(--color-primary-700);
+  --chart-5: var(--color-primary-200);
+  /* dark equivalent: slightly above the dark plot background */
+  --chart-stroke: var(--color-neutral-800);
 }
 
 @theme inline {
@@ -90,26 +128,18 @@ html.dark {
   --color-chart-3: var(--chart-3);
   --color-chart-4: var(--chart-4);
   --color-chart-5: var(--chart-5);
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
+}
+
+/* Base UI quick-start globals */
+body {
+  position: relative; /* iOS 26+ Safari: full-viewport backdrops */
+}
+#app {
+  isolation: isolate; /* portals always render above page contents */
 }
 
 @layer base {
-  * {
-    @apply border-border outline-ring/50;
-  }
   body {
     @apply bg-background text-foreground;
   }
-}
-
-.bg-striped {
-  background-color: var(--muted);
-  background-image: repeating-linear-gradient(
-    45deg,
-    transparent 0 6px,
-    color-mix(in srgb, var(--muted-foreground) 15%, transparent) 6px 12px
-  );
 }

@@ -6,7 +6,8 @@
 import { parse, converter } from 'culori';
 
 const toOklch = converter('oklch');
-import type { ScaleStepNumber } from './types';
+const toHsl = converter('hsl');
+import { SCALE_STEPS, type Scale, type ScaleStepNumber } from './types';
 
 export interface FamilyShade { number: ScaleStepNumber; hex: string }
 export interface ColorFamily { name: string; id: string; shades: FamilyShade[] }
@@ -341,3 +342,34 @@ export const CHROMATIC_PROFILE = buildProfile(
   TAILWIND_FAMILIES.filter((f) => !GRAY_FAMILY_NAMES.has(f.name)).map((f) => f.name),
 );
 export const GRAY_PROFILE = buildProfile([...GRAY_FAMILY_NAMES]);
+
+const FAMILY_BY_ID = new Map(TAILWIND_FAMILIES.map((f) => [f.id, f]));
+
+/** Look up a Tailwind family by its id (e.g. 'blue'). */
+export function familyById(id: string): ColorFamily | undefined {
+  return FAMILY_BY_ID.get(id);
+}
+
+/** Build an exact {@link Scale} from a Tailwind family — the family's own hex shades, anchored at 500. */
+export function scaleFromFamily(family: ColorFamily): Scale {
+  const hexByStep = new Map(family.shades.map((s) => [s.number, s.hex]));
+  const input = hexByStep.get(500)!;
+  return {
+    input,
+    anchorStep: 500,
+    anchors: [{ step: 500, hex: input }],
+    closestFamily: family.name,
+    warnings: [],
+    steps: SCALE_STEPS.map((n) => {
+      const hex = hexByStep.get(n)!;
+      const ok = toOklch(parse(hex)!);
+      const hsl = toHsl(parse(hex)!);
+      return {
+        number: n,
+        hex,
+        oklch: { l: ok.l, c: ok.c ?? 0, h: ok.h ?? 0 },
+        hsl: { h: hsl.h ?? 0, s: hsl.s ?? 0, l: hsl.l ?? 0 },
+      };
+    }),
+  };
+}

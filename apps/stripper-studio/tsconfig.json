@@ -9,7 +9,7 @@
       "DOM",
       "DOM.Iterable"
     ],
-    "jsx": "preserve",
+    "jsx": "react-jsx",
     "noEmit": true,
     "types": [
       "vite/client",
@@ -26,9 +26,10 @@
   },
   "include": [
     "src/**/*.ts",
-    "src/**/*.vue",
+    "src/**/*.tsx",
     "vite.config.ts",
     "vitest.config.ts",
-    "test/**/*.spec.ts"
+    "test/**/*.spec.ts",
+    "test/**/*.spec.tsx"
   ]
 }
