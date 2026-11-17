@@ -152,9 +152,12 @@ describe('studio App', () => {
     expect(probe().state.primaryPreset).toBe('violet');
     expect(probe().state.neutralPreset).toBe('zinc');
 
-    // edit the primary brand color hex
+    // edit the primary brand color hex (the picker's field reads on Enter)
     const hexInput = screen.getAllByRole('textbox')[0]!; // first primary anchor hex field
     await user.clear(hexInput);
+    await user.keyboard('#ef4444');
+    await user.keyboard('{Enter}');
+    expect(probe().state.primaryAnchors).toEqual(['#ef4444']);
     expect(probe().state.primaryPreset).toBeNull();
     expect(probe().state.neutralPreset).toBe('zinc');
   });
@@ -385,5 +388,38 @@ describe('studio App', () => {
     expect(configPayload).toContain('"preset"');
     // the copied config round-trips through the loader
     expect(parseConfigJson(configPayload)).not.toBeNull();
+  });
+
+  it('the color picker popover opens with area, hue slider and format fields', async () => {
+    const user = userEvent.setup();
+    renderApp();
+    await user.click(screen.getAllByRole('button', { name: 'Open color picker' })[0]!);
+    const dialog = await screen.findByRole('dialog');
+    expect(dialog).toBeTruthy();
+    // the saturation area and the hue slider are ARIA sliders
+    expect(screen.getAllByRole('slider').length).toBeGreaterThanOrEqual(2);
+    // the fields show the hex format with the format menu (all 5 formats)
+    expect(screen.getAllByRole('button', { name: /Color format, HEX/ }).length).toBe(1);
+    // eyedropper: not rendered where the EyeDropper API is missing (happy-dom)
+    expect(document.querySelector('[data-slot="color-picker-eye-dropper"]')).toBeNull();
+    await user.keyboard('{Escape}');
+  });
+
+  it('typing a hex into the picker commits the anchor; invalid text is restored', async () => {
+    const user = userEvent.setup();
+    renderApp();
+    const hexInput = screen.getAllByRole('textbox')[0]!;
+
+    // valid hex: committed lowercased, preset cleared
+    await user.clear(hexInput);
+    await user.keyboard('#FF0000{Enter}');
+    expect(probe().state.primaryAnchors).toEqual(['#ff0000']);
+    expect(probe().state.primaryPreset).toBeNull();
+
+    // invalid text: dropped, the value is restored (the picker writes hex in capitals), anchor unchanged
+    await user.clear(hexInput);
+    await user.keyboard('zzz{Enter}');
+    expect(probe().state.primaryAnchors).toEqual(['#ff0000']);
+    await waitFor(() => expect((hexInput as HTMLInputElement).value).toBe('#FF0000'));
   });
 });

@@ -1,8 +1,8 @@
 import { type ScaleConfig, TAILWIND_FAMILIES } from 'stripper';
 import { MAX_ANCHORS, type NeutralTint, type ScaleKey } from '@/context/StudioState';
+import { ColorPicker, ColorPickerContent, ColorPickerInput } from '@/components/reui/color-picker';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { SelectContent, SelectItem, SelectRoot, SelectTrigger } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
@@ -112,19 +112,17 @@ export function ConfigPanel({
         <div className="space-y-1.5">
           {anchors.map((hex, i) => (
             <div key={i} className="flex items-center gap-2">
-              <input
-                type="color"
+              <ColorPicker
                 value={hex}
+                format="hex"
                 aria-label={`Brand color ${i + 1}`}
-                className="h-8 w-10 shrink-0 cursor-pointer border border-input bg-transparent"
-                onChange={(e) => updateAnchor(i, e.target.value)}
-              />
-              <Input
-                value={hex}
-                className="font-mono text-xs"
-                spellCheck={false}
-                onChange={(e) => updateAnchor(i, e.target.value)}
-              />
+                onValueChange={(value) => {
+                  if (value) updateAnchor(i, value.toLowerCase())
+                }}
+              >
+                <ColorPickerInput className="font-mono text-xs" spellCheck={false} />
+                <ColorPickerContent align="start" />
+              </ColorPicker>
               {anchors.length > 1 && (
                 <Button
                   variant="ghost"

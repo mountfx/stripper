@@ -3,7 +3,7 @@ import type { ComponentProps } from 'react';
 import { cn } from '@/lib/utils';
 
 export type ButtonVariant = 'solid' | 'outline' | 'ghost';
-export type ButtonSize = 'sm' | 'md';
+export type ButtonSize = 'xs' | 'sm' | 'md' | 'icon' | 'icon-sm' | 'icon-xs';
 
 const baseClasses =
   'flex items-center justify-center gap-2 rounded-none border text-sm leading-none whitespace-nowrap font-normal select-none focus-visible:outline-2 focus-visible:-outline-offset-1 focus-visible:outline-ring data-disabled:border-muted-foreground data-disabled:text-muted-foreground disabled:border-muted-foreground disabled:text-muted-foreground';
@@ -18,8 +18,12 @@ const variantClasses: Record<ButtonVariant, string> = {
 };
 
 const sizeClasses: Record<ButtonSize, string> = {
+  xs: 'h-6 gap-1 px-1.5 text-xs [&_svg]:size-3.5',
   sm: 'h-7 px-2 text-xs',
   md: 'h-8 px-3',
+  icon: 'size-8 p-0 [&_svg]:size-4',
+  'icon-sm': 'size-7 p-0 [&_svg]:size-3.5',
+  'icon-xs': 'size-5 p-0 [&_svg]:size-3.5',
 };
 
 export interface ButtonProps extends ComponentProps<typeof BaseButton> {

@@ -2,6 +2,16 @@ import { Separator as BaseSeparator } from '@base-ui/react/separator';
 import type { ComponentProps } from 'react';
 import { cn } from '@/lib/utils';
 
-export function Separator({ className, ...props }: ComponentProps<typeof BaseSeparator>) {
-  return <BaseSeparator orientation="horizontal" className={cn('h-px w-full bg-muted', className)} {...props} />;
+export function Separator({ className, orientation = 'horizontal', ...props }: ComponentProps<typeof BaseSeparator>) {
+  return (
+    <BaseSeparator
+      orientation={orientation}
+      className={cn(
+        'shrink-0 bg-muted',
+        orientation === 'horizontal' ? 'h-px w-full' : 'h-full w-px',
+        className,
+      )}
+      {...props}
+    />
+  );
 }

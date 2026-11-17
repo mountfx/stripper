@@ -199,7 +199,7 @@ export function ContrastMatrix({ scale }: { scale: Scale | null }) {
                           </span>
                         </div>
                       ) : (
-                        <div className="h-12 w-full min-w-12 bg-muted" />
+                        <div className="h-12 w-full min-w-12 bg-striped" />
                       )}
                     </Tooltip>
                   </td>
