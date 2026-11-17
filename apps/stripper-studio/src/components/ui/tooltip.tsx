@@ -3,7 +3,7 @@ import type { ReactElement, ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 
 const POPUP =
-  'relative flex flex-col border border-border bg-popover px-2 py-1 text-sm text-popover-foreground origin-[var(--transform-origin)] shadow-[0.25rem_0.25rem_0] shadow-black/12 transition-[transform,opacity] duration-100 ease-out data-ending-style:opacity-0 data-ending-style:[transform:scale(0.98)] data-instant:transition-none data-starting-style:opacity-0 data-starting-style:[transform:scale(0.98)]';
+  'relative flex flex-col border border-border bg-popover px-2 py-1 text-sm text-popover-foreground origin-[var(--transform-origin)] transition-[transform,opacity] duration-100 ease-out data-ending-style:opacity-0 data-ending-style:[transform:scale(0.98)] data-instant:transition-none data-starting-style:opacity-0 data-starting-style:[transform:scale(0.98)]';
 
 export function TooltipProvider({
   children,

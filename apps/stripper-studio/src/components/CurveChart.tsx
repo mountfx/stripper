@@ -346,7 +346,7 @@ export function CurveChart({ scale, metric, scaleKey }: CurveChartProps) {
             className="pointer-events-none absolute z-50 -translate-x-1/2 -translate-y-full"
             style={{ left: `${tooltip.x}px`, top: `${tooltip.y}px` }}
           >
-            <div className="whitespace-nowrap border border-border bg-popover px-2 py-1 font-mono text-xs leading-none text-popover-foreground shadow-[0.25rem_0.25rem_0] shadow-black/12">
+            <div className="whitespace-nowrap border border-border bg-popover px-2 py-1 font-mono text-xs leading-none text-popover-foreground">
               {tooltip.text}
             </div>
           </div>

@@ -22,7 +22,7 @@ export function PopoverContent({ className, align = 'start', sideOffset = 6, chi
         <BasePopover.Popup
           data-slot="popover-content"
           className={cn(
-            'w-72 origin-(--transform-origin) border border-border bg-popover text-popover-foreground shadow-[0.25rem_0.25rem_0] shadow-black/12 outline-none transition-[scale,opacity] duration-100 ease-out data-ending-style:scale-[0.98] data-ending-style:opacity-0 data-starting-style:scale-[0.98] data-starting-style:opacity-0',
+            'w-72 origin-(--transform-origin) border border-border bg-popover text-popover-foreground outline-none transition-[scale,opacity] duration-100 ease-out data-ending-style:scale-[0.98] data-ending-style:opacity-0 data-starting-style:scale-[0.98] data-starting-style:opacity-0',
             className,
           )}
           {...props}
