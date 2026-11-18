@@ -26,15 +26,11 @@ import { MAX_ANCHORS, parseConfigJson } from '@/lib/configExport';
 export { MAX_ANCHORS };
 
 /**
- * App-layer role defaults: the engine is role-agnostic, the studio decides that
- * primary scales use consistent contrast and neutrals keep their own lightness.
+ * App-layer role defaults: both scales run the balanced curve with the
+ * consistent APCA ladder by default; the neutral keeps tint 'own'.
  */
-const PRIMARY_DEFAULTS: ScaleConfig = defaultConfig();
-const NEUTRAL_DEFAULTS: ScaleConfig = { ...defaultConfig(), contrastMode: 'none' };
-
-/** Default exact-preset scales shown on a fresh load (Tailwind violet / zinc). */
-const DEFAULT_PRIMARY_PRESET = 'violet';
-const DEFAULT_NEUTRAL_PRESET = 'zinc';
+const PRIMARY_DEFAULTS: ScaleConfig = { ...defaultConfig(), baseMode: 'balancedCurve' };
+const NEUTRAL_DEFAULTS: ScaleConfig = { ...defaultConfig(), baseMode: 'balancedCurve' };
 
 export type ScaleKey = 'primary' | 'neutral';
 export type NeutralTint = 'own' | 'primary';
@@ -164,14 +160,14 @@ const FocusContext = createContext<FocusContextValue | null>(null);
 export function StudioProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<StudioState>(() => {
     const urlState = loadFromUrl();
-    // presets default to exact Tailwind scales on a fresh load; URL values win
-    // (including an explicit null, i.e. "custom"); anchors fall back to the
-    // active preset's 500 shade so URL-only presets stay self-consistent
-    const primaryPreset = urlState && 'primaryPreset' in urlState ? urlState.primaryPreset! : DEFAULT_PRIMARY_PRESET;
-    const neutralPreset = urlState && 'neutralPreset' in urlState ? urlState.neutralPreset! : DEFAULT_NEUTRAL_PRESET;
+    // no presets by default (generated scales); URL preset values win,
+    // including an explicit null; anchors fall back to the active preset's
+    // 500 shade so URL-only presets stay self-consistent
+    const primaryPreset = urlState && 'primaryPreset' in urlState ? urlState.primaryPreset! : null;
+    const neutralPreset = urlState && 'neutralPreset' in urlState ? urlState.neutralPreset! : null;
     return {
-      primaryAnchors: urlState?.primaryAnchors ?? [presetAnchorHex(primaryPreset) ?? '#8b5cf6'],
-      neutralAnchors: urlState?.neutralAnchors ?? [presetAnchorHex(neutralPreset) ?? '#71717a'],
+      primaryAnchors: urlState?.primaryAnchors ?? [presetAnchorHex(primaryPreset) ?? '#b766dc'],
+      neutralAnchors: urlState?.neutralAnchors ?? [presetAnchorHex(neutralPreset) ?? '#a49aa8'],
       primaryConfig: urlState?.primaryConfig ?? { ...PRIMARY_DEFAULTS },
       neutralConfig: urlState?.neutralConfig ?? { ...NEUTRAL_DEFAULTS },
       neutralTint: urlState?.neutralTint ?? 'own',

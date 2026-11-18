@@ -93,18 +93,19 @@ describe('studio App', () => {
     expect(container.firstElementChild).not.toBeNull();
   });
 
-  it('renders exact Tailwind preset strips by default and 11 swatches per scale', () => {
+  it('renders generated scales by default (no presets) and 11 swatches per scale', () => {
     renderApp();
     expect(screen.getByText('primary')).toBeTruthy();
     expect(screen.getByText('neutral')).toBeTruthy();
-    // per-scale exact preset badges
-    expect(screen.getByText('Violet preset (exact)')).toBeTruthy();
-    expect(screen.getByText('Zinc preset (exact)')).toBeTruthy();
-    // both strips render 11 swatches each
+    // no exact-preset badges on a fresh load
+    expect(screen.queryByText('Violet preset (exact)')).toBeNull();
+    expect(screen.queryByText('Zinc preset (exact)')).toBeNull();
+    expect(probe().state.primaryPreset).toBeNull();
+    expect(probe().state.neutralPreset).toBeNull();
+    // both strips render 11 swatches each; the default brand colors are shown
     expect(swatches()).toHaveLength(22);
-    // the exact preset hexes are shown (violet-500 / zinc-500)
-    expect(document.body.innerHTML).toContain('#8b5cf6');
-    expect(document.body.innerHTML).toContain('#71717a');
+    expect(document.body.innerHTML).toContain('#b766dc');
+    expect(document.body.innerHTML).toContain('#a49aa8');
   });
 
   it('renders the export panel with @theme output', () => {
@@ -148,7 +149,7 @@ describe('studio App', () => {
 
   it('any edit to a scale clears only that scale’s preset', async () => {
     const user = userEvent.setup();
-    renderApp();
+    renderApp('?ppreset=violet&npreset=zinc');
     expect(probe().state.primaryPreset).toBe('violet');
     expect(probe().state.neutralPreset).toBe('zinc');
 
@@ -201,7 +202,7 @@ describe('studio App', () => {
     renderApp();
     // add a second brand color to the primary scale
     await user.click(screen.getAllByText('+ Add brand color')[0]!);
-    expect(probe().state.primaryAnchors).toEqual(['#8b5cf6', '#888888']);
+    expect(probe().state.primaryAnchors).toEqual(['#b766dc', '#888888']);
     // preset cleared by the edit
     expect(probe().state.primaryPreset).toBeNull();
     // both anchor steps get pin markers (primary strip; neutral preset keeps its own)
@@ -211,7 +212,7 @@ describe('studio App', () => {
     const removeButtons = screen.getAllByTitle(/^Remove brand color/);
     expect(removeButtons).toHaveLength(2);
     await user.click(removeButtons[1]!);
-    expect(probe().state.primaryAnchors).toEqual(['#8b5cf6']);
+    expect(probe().state.primaryAnchors).toEqual(['#b766dc']);
   });
 
   it('parses multi-anchor and preset URL params', () => {
@@ -219,7 +220,7 @@ describe('studio App', () => {
     const p = probe();
     expect(p.state.primaryAnchors).toEqual(['#895af6', '#14b8a6']);
     expect(p.state.neutralAnchors).toEqual(['#798680', '#f1f3f3']);
-    expect(p.state.primaryPreset).toBe('violet'); // default, no ppreset param
+    expect(p.state.primaryPreset).toBeNull(); // no ppreset param
     expect(p.state.neutralPreset).toBe('stone');
   });
 
@@ -227,7 +228,7 @@ describe('studio App', () => {
     renderApp('?ppreset=not-a-family');
     const p = probe();
     expect(p.state.primaryPreset).toBeNull();
-    expect(p.state.neutralPreset).toBe('zinc');
+    expect(p.state.neutralPreset).toBeNull();
   });
 
   it('keep brand colors exact: checkbox drives config and anchors stay byte-exact', async () => {
@@ -235,7 +236,10 @@ describe('studio App', () => {
     renderApp();
     // apca contrast on by default for the primary scale; flag off
     expect(probe().state.primaryConfig.keepAnchorsExact).toBeFalsy();
-    const checkbox = screen.getByRole('checkbox', { name: 'Keep brand colors exact' });
+    // both scales run the APCA ladder by default -> both panels show the checkbox
+    const checkboxes = screen.getAllByRole('checkbox', { name: 'Keep brand colors exact' });
+    const checkbox = checkboxes[0]!; // the primary scale's
+    expect(checkboxes).toHaveLength(2);
     await user.click(checkbox);
     expect(probe().state.primaryConfig.keepAnchorsExact).toBe(true);
     // anchor steps keep the input hexes exactly
