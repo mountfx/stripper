@@ -1,5 +1,5 @@
 import { memo } from 'react';
-import { criticalPairWarnings, familyById, type Scale } from 'stripper';
+import { criticalPairWarnings, familyById, type ContrastMode, type Scale } from 'stripper';
 import type { ScaleKey } from '@/context/StudioState';
 import { ScaleStrip } from './ScaleStrip';
 import { ContrastMatrix } from './ContrastMatrix';
@@ -11,6 +11,7 @@ export interface ScaleSectionProps {
   scale: Scale | null;
   error: string | null;
   preset: string | null;
+  contrastMode: ContrastMode;
 }
 
 /**
@@ -18,7 +19,14 @@ export interface ScaleSectionProps {
  * keeps its identity, so the entire main column skips re-rendering and the
  * expensive charts/matrix recompute only in the deferred (transition) pass.
  */
-export const ScaleSection = memo(function ScaleSection({ role, title, scale, error, preset }: ScaleSectionProps) {
+export const ScaleSection = memo(function ScaleSection({
+  role,
+  title,
+  scale,
+  error,
+  preset,
+  contrastMode,
+}: ScaleSectionProps) {
   const warnings = scale ? [...scale.warnings, ...criticalPairWarnings(scale)] : [];
   const presetFamily = preset ? familyById(preset) : undefined;
 
@@ -50,10 +58,19 @@ export const ScaleSection = memo(function ScaleSection({ role, title, scale, err
         </p>
       ))}
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-        <CurveChart scale={scale} metric="l" scaleKey={role} />
-        <CurveChart scale={scale} metric="c" scaleKey={role} />
-        <CurveChart scale={scale} metric="h" scaleKey={role} />
+        <CurveChart scale={scale} metric="l" scaleKey={role} contrastMode={contrastMode} />
+        <CurveChart scale={scale} metric="c" scaleKey={role} contrastMode={contrastMode} />
+        <CurveChart scale={scale} metric="h" scaleKey={role} contrastMode={contrastMode} />
       </div>
+      <p className="text-[11px] leading-relaxed text-muted-foreground">
+        Diagonal hatch: outside sRGB at this position (gamut).{' '}
+        {contrastMode !== 'none' && (
+          <>
+            Dashed line: the contrast ladder boundary per step — generated steps sit on it; a dashed dot marks a step
+            whose target was unreachable (approximated).
+          </>
+        )}
+      </p>
       <ContrastMatrix scale={scale} />
     </section>
   );

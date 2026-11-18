@@ -60,7 +60,7 @@ export function ScaleStrip({ scale, scaleKey }: ScaleStripProps) {
               )}
               {anchored && (
                 <span
-                  className="absolute bottom-1 left-1/2 h-1.5 w-1.5 -translate-x-1/2"
+                  className="absolute top-3 right-2 h-1.5 w-1.5 -translate-x-1/2"
                   style={{ backgroundColor: textColor }}
                   title="brand color anchored here"
                 />

@@ -274,6 +274,21 @@ describe('studio App', () => {
     expect(document.querySelectorAll('svg button')).toHaveLength(0);
   });
 
+  it('the L chart draws the ladder boundary for ladder modes only, with a legend', () => {
+    renderApp();
+    // default: primary apca, neutral none → exactly one ladder line (primary L chart)
+    expect(document.querySelectorAll('.chart-ladder-line')).toHaveLength(1);
+    // legend on both sections; the ladder sentence only where a ladder is active
+    expect(screen.getAllByText(/Diagonal hatch: outside sRGB/)).toHaveLength(2);
+    expect(screen.getAllByText(/ladder boundary/)).toHaveLength(1);
+  });
+
+  it('no ladder line without a contrast ladder', () => {
+    renderApp(`?pcfg=${btoa(JSON.stringify({ contrastMode: 'none' }))}`);
+    expect(document.querySelectorAll('.chart-ladder-line')).toHaveLength(0);
+    expect(screen.queryAllByText(/ladder boundary/)).toHaveLength(0);
+  });
+
   it('contrast matrix renders the 13x13 uicolors-style grid', () => {
     renderApp();
     // axis includes white and black (header + row labels, in both scales' matrices)
@@ -282,22 +297,25 @@ describe('studio App', () => {
     // 13 column headers + 13 rows (plus corner header cell) per matrix
     expect(document.querySelectorAll('thead th')).toHaveLength(28);
     expect(document.querySelectorAll('tbody tr')).toHaveLength(26);
-    // default APCA filter hides some cells behind striped placeholders
-    expect(document.querySelectorAll('.bg-striped').length).toBeGreaterThan(0);
+    // default APCA filter hides some cells behind muted placeholders
+    const stripedPerTable = () =>
+      Array.from(document.querySelectorAll('table')).map((t) => t.querySelectorAll('td .bg-muted').length);
+    expect(stripedPerTable().every((n) => n > 0)).toBe(true);
   });
 
   it('contrast matrix threshold pills and metric toggle work', async () => {
     const user = userEvent.setup();
     renderApp();
     const tables = () => Array.from(document.querySelectorAll('table')) as HTMLTableElement[];
-    // click the "All" pill -> nothing is striped in the first matrix (the second keeps its own filters)
+    const hidden = () => tables().map((t) => t.querySelectorAll('td .bg-muted').length);
+    // click the "All" pill -> nothing is hidden in the first matrix (the second keeps its own filters)
     await user.click(screen.getAllByRole('button', { name: 'All' })[0]!);
-    expect(tables()[0]!.querySelectorAll('.bg-striped')).toHaveLength(0);
-    expect(tables()[1]!.querySelectorAll('.bg-striped').length).toBeGreaterThan(0);
+    expect(hidden()[0]).toBe(0);
+    expect(hidden()[1]).toBeGreaterThan(0);
     // switch to WCAG 2.2 -> helper text describes ratios
     await user.click(screen.getAllByRole('button', { name: 'WCAG 2.2' })[0]!);
     expect(await screen.findByText(/Body text \(minimum\)/)).toBeTruthy();
-    expect(tables()[0]!.querySelectorAll('.bg-striped').length).toBeGreaterThan(0); // default 4.5 threshold hides again
+    expect(hidden()[0]).toBeGreaterThan(0); // default 4.5 threshold hides again
   });
 
   it('the dark toggle switches the document element class', async () => {
