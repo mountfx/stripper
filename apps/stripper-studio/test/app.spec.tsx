@@ -383,11 +383,19 @@ describe('studio App', () => {
     const jsonPayload = JSON.parse(writeText.mock.calls[1]![0] as string);
     expect(jsonPayload.primary.steps['500'].hex).toBeTruthy();
 
+    // Color JSON tab: minimal shape { primary: [...], neutral: [...] }
+    await user.click(screen.getByRole('tab', { name: 'Color JSON' }));
+    await user.click(screen.getByRole('button', { name: 'Copy' }));
+    await waitFor(() => expect(writeText).toHaveBeenCalledTimes(3));
+    const colorsPayload = JSON.parse(writeText.mock.calls[2]![0] as string);
+    expect(colorsPayload.primary).toHaveLength(11);
+    expect(colorsPayload.primary[0]).toMatch(/^#[0-9a-f]{6}$/);
+
     // Config JSON tab: the payload is a loadable config
     await user.click(screen.getByRole('tab', { name: 'Config JSON' }));
     await user.click(screen.getByRole('button', { name: 'Copy' }));
-    await waitFor(() => expect(writeText).toHaveBeenCalledTimes(3));
-    const configPayload = writeText.mock.calls[2]![0] as string;
+    await waitFor(() => expect(writeText).toHaveBeenCalledTimes(4));
+    const configPayload = writeText.mock.calls[3]![0] as string;
     expect(configPayload).toContain('"preset"');
     // the copied config round-trips through the loader
     expect(parseConfigJson(configPayload)).not.toBeNull();

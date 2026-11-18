@@ -245,6 +245,7 @@ toThemeCss(scales: Array<{ name: string; scale: Scale }>): string
 // @theme { --color-primary-500: oklch(60.1% 0.238 293.6); ... }  (Tailwind v4)
 
 toJson(scales): string        // JSON tokens incl. hex/oklch/hsl per step
+toColorsJson(scales): string  // minimal JSON: { primary: ["#..", ...], neutral: [...] } (hex, step order)
 oklchString(step): string     // "oklch(60.1% 0.238 293.6)"
 
 toSwiftUi(scales): string     // SwiftUI: extension Color { static let primary500 = Color(red: 0.6353, green: 0.5255, blue: 0.9922)  // #a286fd }

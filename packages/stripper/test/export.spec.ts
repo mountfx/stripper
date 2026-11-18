@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { generateScale } from '../src/generate';
-import { toThemeCss, toJson, toSwiftUi, toKotlin } from '../src/export';
+import { toThemeCss, toColorsJson, toJson, toSwiftUi, toKotlin } from '../src/export';
 import { familyById, scaleFromFamily } from '../src/families';
 import { SCALE_STEPS } from '../src/types';
 
@@ -27,6 +27,25 @@ describe('export', () => {
     expect(lines).toHaveLength(1);
     const oklch = lines[0]!.split(':')[1]!.replace(';', '').trim();
     expect(oklch).toMatch(/^oklch\(/);
+  });
+
+  it('emits minimal JSON with hex arrays per scale in step order', () => {
+    const json = toColorsJson([
+      { name: 'primary', scale: primary() },
+      { name: 'neutral', scale: neutral() },
+    ]);
+    const parsed = JSON.parse(json);
+    expect(Object.keys(parsed)).toEqual(['primary', 'neutral']);
+    // the arrays are exactly the steps' hexes, in step order 50 -> 950
+    expect(parsed.primary).toEqual(primary().steps.map((s) => s.hex));
+    expect(parsed.neutral).toEqual(neutral().steps.map((s) => s.hex));
+    for (const arr of [parsed.primary, parsed.neutral]) {
+      expect(arr).toHaveLength(11);
+      for (const hex of arr) expect(hex).toMatch(/^#[0-9a-f]{6}$/);
+    }
+    // first/last are the lightest/darkest steps
+    expect(parsed.primary[0]).toBe('#f5f3ff'); // violet-50
+    expect(parsed.primary.at(-1)).toBe('#2e1065'); // violet-950
   });
 
   it('JSON export includes all steps and metadata', () => {

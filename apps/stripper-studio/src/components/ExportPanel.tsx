@@ -1,16 +1,17 @@
 import { useMemo, useState } from 'react';
-import { toThemeCss, toJson, toSwiftUi, toKotlin, type ThemeScales } from 'stripper';
+import { toThemeCss, toColorsJson, toJson, toSwiftUi, toKotlin, type ThemeScales } from 'stripper';
 import { useStudio } from '@/context/StudioState';
 import { useClipboard } from '@/hooks/useClipboard';
 import { buildConfigJson } from '@/lib/configExport';
 import { Button } from '@/components/ui/button';
 import { TabsRoot, TabsIndicator, TabsList, TabsPanel, TabsTab } from '@/components/ui/tabs';
 
-type Tab = 'css' | 'json' | 'swift' | 'kotlin' | 'config';
+type Tab = 'css' | 'json' | 'colors' | 'swift' | 'kotlin' | 'config';
 
 const TABS: Array<{ value: Tab; label: string; file: string; mime: string }> = [
   { value: 'css', label: '@theme CSS', file: 'theme.css', mime: 'text/css' },
   { value: 'json', label: 'JSON', file: 'tokens.json', mime: 'application/json' },
+  { value: 'colors', label: 'Color JSON', file: 'colors.json', mime: 'application/json' },
   { value: 'swift', label: 'SwiftUI', file: 'Colors.swift', mime: 'text/plain' },
   { value: 'kotlin', label: 'Kotlin', file: 'Colors.kt', mime: 'text/plain' },
   { value: 'config', label: 'Config JSON', file: 'config.json', mime: 'application/json' },
@@ -28,6 +29,7 @@ export function ExportPanel({ scales }: { scales: ThemeScales }) {
     () => ({
       css: toThemeCss(scales),
       json: toJson(scales),
+      colors: toColorsJson(scales),
       swift: toSwiftUi(scales),
       kotlin: toKotlin(scales),
       config: buildConfigJson({

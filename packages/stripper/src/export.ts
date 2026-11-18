@@ -50,6 +50,15 @@ export function toJson(scales: ThemeScales): string {
   return JSON.stringify(out, null, 2) + '\n';
 }
 
+/** Minimal JSON export: just the colors, per scale, as hex arrays in step order. */
+export function toColorsJson(scales: ThemeScales): string {
+  const out: Record<string, string[]> = {};
+  for (const { name, scale } of scales) {
+    out[name] = scale.steps.map((step) => step.hex);
+  }
+  return JSON.stringify(out, null, 2) + '\n';
+}
+
 // ---- native color tokens (SwiftUI / Jetpack Compose) ---------------------------------------
 
 function hexParts(hex: string): { rgb01: [number, number, number]; argb: string } {
