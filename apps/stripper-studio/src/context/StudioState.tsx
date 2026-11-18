@@ -26,11 +26,10 @@ import { MAX_ANCHORS, parseConfigJson } from '@/lib/configExport';
 export { MAX_ANCHORS };
 
 /**
- * App-layer role defaults: both scales run the balanced curve with the
- * consistent APCA ladder by default; the neutral keeps tint 'own'.
+ * App-layer role defaults: the engine default (balanced curve + consistent
+ * APCA contrast) for both scales; the neutral keeps tint 'own'.
  */
-const PRIMARY_DEFAULTS: ScaleConfig = { ...defaultConfig(), baseMode: 'balancedCurve' };
-const NEUTRAL_DEFAULTS: ScaleConfig = { ...defaultConfig(), baseMode: 'balancedCurve' };
+const DEFAULTS: ScaleConfig = defaultConfig();
 
 export type ScaleKey = 'primary' | 'neutral';
 export type NeutralTint = 'own' | 'primary';
@@ -104,9 +103,9 @@ function loadFromUrl(): Partial<StudioState> | null {
   const n = q.get('n');
   if (p) state.primaryAnchors = anchorsFromUrl(q, p, 'p');
   if (n) state.neutralAnchors = anchorsFromUrl(q, n, 'n');
-  const pcfg = decodeConfig(q.get('pcfg'), PRIMARY_DEFAULTS);
+  const pcfg = decodeConfig(q.get('pcfg'), DEFAULTS);
   if (pcfg) state.primaryConfig = pcfg;
-  const ncfg = decodeConfig(q.get('ncfg'), NEUTRAL_DEFAULTS);
+  const ncfg = decodeConfig(q.get('ncfg'), DEFAULTS);
   if (ncfg) state.neutralConfig = ncfg;
   const tint = q.get('ntint');
   if (tint === 'own' || tint === 'primary') state.neutralTint = tint;
@@ -168,8 +167,8 @@ export function StudioProvider({ children }: { children: ReactNode }) {
     return {
       primaryAnchors: urlState?.primaryAnchors ?? [presetAnchorHex(primaryPreset) ?? '#b766dc'],
       neutralAnchors: urlState?.neutralAnchors ?? [presetAnchorHex(neutralPreset) ?? '#a49aa8'],
-      primaryConfig: urlState?.primaryConfig ?? { ...PRIMARY_DEFAULTS },
-      neutralConfig: urlState?.neutralConfig ?? { ...NEUTRAL_DEFAULTS },
+      primaryConfig: urlState?.primaryConfig ?? { ...DEFAULTS },
+      neutralConfig: urlState?.neutralConfig ?? { ...DEFAULTS },
       neutralTint: urlState?.neutralTint ?? 'own',
       dark: urlState?.dark ?? false,
       primaryPreset,
@@ -205,8 +204,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
   const resetScale = useCallback((key: ScaleKey) => {
     setState((s) => ({
       ...s,
-      [key === 'primary' ? 'primaryConfig' : 'neutralConfig']:
-        key === 'primary' ? { ...PRIMARY_DEFAULTS } : { ...NEUTRAL_DEFAULTS },
+      [key === 'primary' ? 'primaryConfig' : 'neutralConfig']: { ...DEFAULTS },
       [key === 'primary' ? 'primaryPreset' : 'neutralPreset']: null,
     }));
   }, []);

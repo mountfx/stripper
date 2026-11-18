@@ -17,7 +17,7 @@ Everything is exported flat from the package root.
 ```ts
 import { generateScale, toThemeCss } from 'stripper';
 
-const scale = generateScale('#895af6'); // transfer curve + consistent APCA contrast
+const scale = generateScale('#895af6'); // balanced curve + consistent APCA contrast
 const neutral = generateScale('#798680', { ...defaultConfig(), contrastMode: 'none' });
 
 const css = toThemeCss([
@@ -53,7 +53,7 @@ Generates an 11-step scale (steps `50, 100, 200, 300, 400, 500, 600, 700, 800,
 
 ```ts
 interface ScaleConfig {
-  baseMode: 'tailwindTransfer' | 'balancedCurve';   // default: 'tailwindTransfer'
+  baseMode: 'tailwindTransfer' | 'balancedCurve';   // default: 'balancedCurve'
   contrastMode: 'none' | 'apca' | 'wcag';           // default: 'apca'
   keepAnchorsExact?: boolean;                       // default: false
   hue: {
@@ -71,7 +71,7 @@ interface ScaleConfig {
 | Option | Notes |
 |--------|-------|
 | `baseMode: 'tailwindTransfer'` | Picks the closest Tailwind v4 family (CIE Lab ΔE) and transfers its lightness/saturation curves to the input hue — uicolors' approach. Gray-ish inputs (HSL sat ≤ 0.15) compare against gray families only; their subtle tint is preserved via the gray chroma curve. |
-| `baseMode: 'balancedCurve'` | Averaged OKLCH lightness/chroma profile of all chromatic families with the input hue. Better for hues with no close Tailwind family. |
+| `baseMode: 'balancedCurve'` | Averaged OKLCH lightness/chroma profile of all chromatic families with the input hue. The default; also the right choice for hues with no close Tailwind family. |
 | `contrastMode: 'apca'` | Each step's lightness is re-solved (hue/chroma kept) so \|Lc\| against black (steps < 500) or white (steps ≥ 500) matches `APCA_CONTRAST_TARGETS`. |
 | `contrastMode: 'wcag'` | Same, using WCAG 2.2 contrast ratios against `WCAG_CONTRAST_TARGETS`. |
 | `contrastMode: 'none'` | Aesthetic only — lightness comes from the base curve; the input color is pinned exactly at its anchor step. |
@@ -80,7 +80,7 @@ interface ScaleConfig {
 | `hue.drift*` | Linear hue rotation from the anchor (zero drift at the anchor) toward each extreme. |
 | `chroma.taper*` | Fades chroma toward the extremes (1 at the anchor, `taper` at the scale end). The sRGB gamut clamp is the only chroma ceiling. |
 
-`defaultConfig(): ScaleConfig` — transfer curve, APCA ladder on, no tint, no shaping.
+`defaultConfig(): ScaleConfig` — balanced curve, APCA ladder on, no tint, no shaping.
 
 ### Return: `Scale`
 

@@ -83,7 +83,7 @@ function taperFactor(
 
 export function defaultConfig(): ScaleConfig {
   return {
-    baseMode: 'tailwindTransfer',
+    baseMode: 'balancedCurve',
     contrastMode: 'apca',
     hue: { driftLight: 0, driftDark: 0 },
     chroma: { taperLight: 1, taperDark: 1 },

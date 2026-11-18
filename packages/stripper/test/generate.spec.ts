@@ -15,8 +15,10 @@ function engineOklch(hex: string): Oklch {
 const toOklch = converter('oklch');
 
 describe('defaultConfig', () => {
-  it('uses the APCA contrast ladder by default', () => {
-    expect(defaultConfig().contrastMode).toBe('apca');
+  it('runs the balanced curve with the APCA contrast ladder by default', () => {
+    const config = defaultConfig();
+    expect(config.baseMode).toBe('balancedCurve');
+    expect(config.contrastMode).toBe('apca');
   });
 
   it('has no tint by default', () => {
@@ -25,7 +27,7 @@ describe('defaultConfig', () => {
 });
 
 describe('generateScale — tailwindTransfer + APCA (uicolors parity)', () => {
-  const scale = generateScale('#a286fd');
+  const scale = generateScale('#a286fd', { ...defaultConfig(), baseMode: 'tailwindTransfer' });
 
   it('produces 11 steps with valid hexes', () => {
     expect(scale.steps).toHaveLength(11);
@@ -49,8 +51,8 @@ describe('generateScale — tailwindTransfer + APCA (uicolors parity)', () => {
   });
 });
 
-describe('generateScale — no-contrast transfer mode', () => {
-  const cfg = { ...defaultConfig(), contrastMode: 'none' as const };
+describe('generateScale — tailwindTransfer, no contrast', () => {
+  const cfg = { ...defaultConfig(), baseMode: 'tailwindTransfer' as const, contrastMode: 'none' as const };
 
   it('pins the input exactly at the anchor step', () => {
     const scale = generateScale('#a286fd', cfg);
@@ -67,7 +69,7 @@ describe('generateScale — no-contrast transfer mode', () => {
   });
 });
 
-describe('generateScale — balancedCurve mode', () => {
+describe('generateScale — balancedCurve mode (the default)', () => {
   it('generates a displayable scale from the averaged profile', () => {
     const cfg = { ...defaultConfig(), baseMode: 'balancedCurve' as const, contrastMode: 'none' as const };
     const scale = generateScale('#3b82f6', cfg);

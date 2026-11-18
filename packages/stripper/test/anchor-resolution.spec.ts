@@ -49,12 +49,19 @@ describe('ladder-aware anchor resolution', () => {
     expect(kept.anchorStep).toBe(expected);
   });
 
-  it('none mode: resolution unchanged (base-curve lightness matching)', () => {
-    // #a286fd in none mode: transfer lightness matching puts it at 400 (HSL-based, as before)
-    const scale = generateScale('#a286fd', { ...defaultConfig(), contrastMode: 'none' });
-    expect(scale.anchorStep).toBe(400);
-    const anchor = scale.steps.find((s) => s.number === 400)!;
+  it('none mode: resolution follows the base-curve lightness matching', () => {
+    // #a286fd in none mode: transfer lightness matching puts it at 400 (HSL-based)
+    const transfer = generateScale('#a286fd', {
+      ...defaultConfig(),
+      baseMode: 'tailwindTransfer',
+      contrastMode: 'none',
+    });
+    expect(transfer.anchorStep).toBe(400);
+    const anchor = transfer.steps.find((s) => s.number === 400)!;
     expect(anchor.hex).toBe('#a286fd'); // pinned exactly in none mode
+    // the balanced curve (the default) matches against the averaged profile instead
+    const balanced = generateScale('#a286fd', { ...defaultConfig(), contrastMode: 'none' });
+    expect(balanced.anchorStep).toBe(500);
   });
 
   it('explicit anchors always win over the ladder-aware resolution', () => {
