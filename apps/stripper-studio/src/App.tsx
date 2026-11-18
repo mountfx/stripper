@@ -132,7 +132,6 @@ function Studio() {
             scale={primaryResult.scale}
             error={primaryResult.error}
             preset={state.primaryPreset}
-            contrastMode={state.primaryConfig.contrastMode}
           />
           <Separator />
           {/* Neutral */}
@@ -142,7 +141,6 @@ function Studio() {
             scale={neutralResult.scale}
             error={neutralResult.error}
             preset={state.neutralPreset}
-            contrastMode={state.neutralConfig.contrastMode}
           />
 
           {/* Export */}

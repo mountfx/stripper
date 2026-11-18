@@ -274,21 +274,6 @@ describe('studio App', () => {
     expect(document.querySelectorAll('svg button')).toHaveLength(0);
   });
 
-  it('the L chart draws the ladder boundary for ladder modes only, with a legend', () => {
-    renderApp();
-    // default: primary apca, neutral none → exactly one ladder line (primary L chart)
-    expect(document.querySelectorAll('.chart-ladder-line')).toHaveLength(1);
-    // legend on both sections; the ladder sentence only where a ladder is active
-    expect(screen.getAllByText(/Diagonal hatch: outside sRGB/)).toHaveLength(2);
-    expect(screen.getAllByText(/ladder boundary/)).toHaveLength(1);
-  });
-
-  it('no ladder line without a contrast ladder', () => {
-    renderApp(`?pcfg=${btoa(JSON.stringify({ contrastMode: 'none' }))}`);
-    expect(document.querySelectorAll('.chart-ladder-line')).toHaveLength(0);
-    expect(screen.queryAllByText(/ladder boundary/)).toHaveLength(0);
-  });
-
   it('contrast matrix renders the 13x13 uicolors-style grid', () => {
     renderApp();
     // axis includes white and black (header + row labels, in both scales' matrices)

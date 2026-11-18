@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ladderBoundaryL, maxSrgbChroma, type ContrastMode, type Scale, type ScaleStepNumber } from 'stripper';
+import { maxSrgbChroma, type Scale, type ScaleStepNumber } from 'stripper';
 import { useFocus, type ScaleKey } from '@/context/StudioState';
 import {
   monotoneSpline,
@@ -24,10 +24,9 @@ interface CurveChartProps {
   scale: Scale | null;
   metric: 'l' | 'c' | 'h';
   scaleKey: ScaleKey;
-  contrastMode: ContrastMode;
 }
 
-export function CurveChart({ scale, metric, scaleKey, contrastMode }: CurveChartProps) {
+export function CurveChart({ scale, metric, scaleKey }: CurveChartProps) {
   const { focused, setFocused, clearFocused } = useFocus();
   const wrapRef = useRef<HTMLDivElement | null>(null);
   const [width, setWidth] = useState(620);
@@ -164,29 +163,6 @@ export function CurveChart({ scale, metric, scaleKey, contrastMode }: CurveChart
     }));
   }, [chart]);
 
-  // ---- contrast ladder boundary (L chart, ladder modes only) ----------------------------
-  // The lightness at which each step's ladder target is exactly met for the
-  // step's own hue/chroma. With a ladder active, generated steps sit on this
-  // line; deviations = unreachable targets (approximated) or kept anchors.
-
-  const ladderSegments = useMemo<string[]>(() => {
-    const c = chart;
-    if (!c || metric !== 'l' || contrastMode === 'none') return [];
-    const segments: string[] = [];
-    let run: string[] = [];
-    c.steps.forEach((s, j) => {
-      const boundary = ladderBoundaryL(s.oklch.h, s.oklch.c, s.number, contrastMode, 0);
-      if (!boundary.reachable) {
-        if (run.length > 1) segments.push(run.join(' '));
-        run = [];
-        return;
-      }
-      run.push(`${c.xStep(j).toFixed(2)},${c.y(boundary.l).toFixed(2)}`);
-    });
-    if (run.length > 1) segments.push(run.join(' '));
-    return segments;
-  }, [chart, metric, contrastMode]);
-
   // ---- region tracing: ONE closed smooth polygon per constraint region ----------------
 
   const regionTraces = useMemo<string[]>(() => {
@@ -322,20 +298,6 @@ export function CurveChart({ scale, metric, scaleKey, contrastMode }: CurveChart
                 fill={`url(#hatch-gray-${scaleKey}-${metric})`}
                 style={{ stroke: 'var(--chart-stroke)', strokeWidth: 1 }}
                 className="chart-region-gray"
-              />
-            ))}
-
-            {/* contrast ladder boundary: dashed, drawn under the curve so it shows only
-                where points deviate (unreachable targets, kept anchors) */}
-            {ladderSegments.map((points, i) => (
-              <polyline
-                key={`ladder-${i}`}
-                points={points}
-                fill="none"
-                stroke="var(--color-foreground)"
-                strokeWidth="1.5"
-                strokeDasharray="4 4"
-                className="chart-ladder-line"
               />
             ))}
 
