@@ -1,4 +1,5 @@
 import type { Scale } from 'stripper';
+import { oklchString } from 'stripper';
 import { useClipboard } from '@/hooks/useClipboard';
 import { useFocus, type ScaleKey } from '@/context/StudioState';
 import { Tooltip } from '@/components/ui/tooltip';
@@ -28,8 +29,7 @@ export function ScaleStrip({ scale, scaleKey }: ScaleStripProps) {
             className="font-mono"
             content={
               <span>
-                {step.number} — {step.hex} ·{' '}
-                {`oklch(${(step.oklch.l * 100).toFixed(1)}% ${step.oklch.c.toFixed(3)} ${step.oklch.h.toFixed(1)})`}
+                {step.number} — {step.hex} · {oklchString(step)}
               </span>
             }
           >

@@ -126,7 +126,7 @@ Rules:
   outermost anchors.
 - Caveat: distant hues can produce desaturated mid steps ("mud"); OKLCH
   interpolation minimizes it, and a future `chromaBoost` option could compensate.
-- More than 4 anchors are truncated with a warning.
+- More than `MAX_ANCHORS` (4) anchors are truncated with a warning.
 
 ### Intentional omissions
 
@@ -214,6 +214,13 @@ wcagTargetFor(step): WcagTarget
 maxSrgbChroma(l, h): number
 // largest chroma at lightness l / hue h that stays inside sRGB
 
+displayableLightnessRange(c, h): { lo, hi } | null
+// the lightness interval for which oklch(l, c, h) exists in sRGB (null when none does)
+
+displayableHueRange(l, c, curveHue, dmin, dmax): { lo, hi }
+// the displayable hue arc at lightness l / chroma c within a window, bridged
+// to curveHue when the curve hue itself is out of gamut
+
 ladderBoundaryL(h, c, step, contrastMode, toleranceOverride?): { l: number; reachable: boolean }
 // the lightness at which the active ladder is met for a color of the given
 // hue/chroma — the boundary of the "contract channel". Strict: the boundary
@@ -259,6 +266,7 @@ familyById(id)             // 'blue' -> Blue family
 CHROMATIC_PROFILE / GRAY_PROFILE   // averaged OKLCH L/C curves per step (FamilyProfile)
 GRAY_FAMILY_NAMES          // Slate/Gray/Zinc/Neutral/Stone
 SCALE_STEPS                // [50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950]
+MAX_ANCHORS                // 4 — the multi-anchor cap enforced by generateScale
 
 // utilities
 pickClosestFamily(hex): { family, anchorStep }

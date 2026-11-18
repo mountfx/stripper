@@ -1,13 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { maxSrgbChroma, type Scale, type ScaleStepNumber } from 'stripper';
-import { useFocus, type ScaleKey } from '@/context/StudioState';
 import {
-  monotoneSpline,
-  wrapHue,
-  traceExtents,
-  displayableLRange,
+  clampHue,
   displayableHueRange,
-} from '@/lib/chartMath';
+  displayableLightnessRange,
+  maxSrgbChroma,
+  type Scale,
+  type ScaleStepNumber,
+} from 'stripper';
+import { useFocus, type ScaleKey } from '@/context/StudioState';
+import { monotoneSpline, traceExtents } from '@/lib/chartMath';
 
 const LABEL: Record<string, string> = {
   l: 'Lightness (L)',
@@ -85,7 +86,7 @@ export function CurveChart({ scale, metric, scaleKey }: CurveChartProps) {
       metric === 'l' ? v.L : metric === 'c' ? v.C : v.H;
 
     // chroma ceiling per sample (C chart): the displayable chroma budget
-    const ceilings = samples.map((s) => maxSrgbChroma(s.L, wrapHue(s.H)));
+    const ceilings = samples.map((s) => maxSrgbChroma(s.L, clampHue(s.H)));
 
     // dynamic y-domain: zoomed to the curve, padded (Stripe-style);
     // the C chart domain includes the ceiling so it stays visible with headroom
@@ -176,7 +177,7 @@ export function CurveChart({ scale, metric, scaleKey }: CurveChartProps) {
       const lo: Array<number | null> = [];
       const hi: Array<number | null> = [];
       for (const s of c.samples) {
-        const range = displayableLRange(s.C, wrapHue(s.H));
+        const range = displayableLightnessRange(s.C, clampHue(s.H));
         if (!range) {
           lo.push(null);
           hi.push(null);
@@ -357,7 +358,7 @@ export function CurveChart({ scale, metric, scaleKey }: CurveChartProps) {
 }
 
 function formatValue(v: number, metric: 'l' | 'c' | 'h'): string {
-  if (metric === 'h') return `${Math.round(wrapHue(v))}°`;
+  if (metric === 'h') return `${Math.round(clampHue(v))}°`;
   if (metric === 'c') return v.toFixed(3);
   return v.toFixed(2);
 }

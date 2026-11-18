@@ -34,7 +34,8 @@ export function checkLightnessMonotonicity(steps: ScaleStep[], warnings: string[
  * Carve-outs: no tailwindTransfer, no hue drift/offset, no tint; chroma taper
  * applies only outside the outermost anchors.
  */
-const MAX_ANCHORS = 4;
+/** Hard cap on brand colors in one scale; extras are truncated with a warning. */
+export const MAX_ANCHORS = 4;
 
 export function generateMultiAnchorScale(anchorList: ScaleAnchor[], cfg: ScaleConfig, warnings: string[]): Scale {
   let anchors = anchorList.map((a) => ({ hex: toHex(a.hex), anchor: a.anchor }));

@@ -1,7 +1,6 @@
-import { defaultConfig, familyById, type ScaleConfig } from 'stripper';
+import { defaultConfig, familyById, MAX_ANCHORS, type ScaleConfig } from 'stripper';
 
-/** Maximum brand colors per scale (shared by the editor, URL params, and config import). */
-export const MAX_ANCHORS = 4;
+export { MAX_ANCHORS };
 
 /** The configuration applied to the color schemes, per scheme. */
 export interface ConfigExportInput {
