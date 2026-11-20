@@ -333,6 +333,28 @@ describe('studio App', () => {
     );
   });
 
+  it('copy API link copies the endpoint URL for the current state', async () => {
+    const user = userEvent.setup();
+    renderApp('?ppreset=violet');
+    // userEvent.setup() resets navigator.clipboard — mock it afterwards
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(window.navigator, 'clipboard', { value: { writeText }, configurable: true });
+
+    await user.click(screen.getByRole('button', { name: 'Copy API link' }));
+    expect(await screen.findByText('Copied!')).toBeTruthy();
+    expect(writeText).toHaveBeenCalledTimes(1);
+    const copied = writeText.mock.calls[0]![0] as string;
+    // the link targets the colors endpoint with the CURRENT state's params
+    expect(copied.startsWith(`${window.location.origin}/api/colors?`)).toBe(true);
+    expect(copied).toContain('p=%238b5cf6'); // violet-500, the preset's anchor
+    expect(copied).toContain('ppreset=violet');
+    // dark is UI chrome and never part of the endpoint link
+    expect(copied).not.toContain('dark=');
+
+    // the link label reverts after the copy flash
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Copy API link' })).toBeTruthy(), { timeout: 2000 });
+  });
+
   it('applyConfig restores a config JSON into state; invalid input is rejected', async () => {
     const user = userEvent.setup();
     const json = buildConfigJson({

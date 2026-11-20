@@ -3,7 +3,8 @@ import type { Scale } from 'stripper';
 import {
   DEFAULT_PRIMARY_ANCHOR,
   DEFAULT_NEUTRAL_ANCHOR,
-  parseStudioParams,
+  stateFromParams,
+  paramsFromState,
   generatePrimary,
   generateNeutral,
   themeFromParams,
@@ -18,9 +19,9 @@ function hexes(scale: Scale): Map<string, string> {
   return new Map(scale.steps.map((s) => [String(s.number), s.hex]));
 }
 
-describe('parseStudioParams', () => {
+describe('stateFromParams', () => {
   it('returns the documented defaults for an empty query', () => {
-    const p = parseStudioParams(params(''));
+    const p = stateFromParams(params(''));
     expect(p.primaryAnchors).toEqual([DEFAULT_PRIMARY_ANCHOR]);
     expect(p.neutralAnchors).toEqual([DEFAULT_NEUTRAL_ANCHOR]);
     expect(p.primaryPreset).toBeNull();
@@ -31,39 +32,68 @@ describe('parseStudioParams', () => {
   });
 
   it('reads anchors from p/p2..p4 and n/n2..n4', () => {
-    const p = parseStudioParams(params('?p=%23ff0000&p2=%2300ff00&p3=%230000ff&n=%23123456'));
+    const p = stateFromParams(params('?p=%23ff0000&p2=%2300ff00&p3=%230000ff&n=%23123456'));
     expect(p.primaryAnchors).toEqual(['#ff0000', '#00ff00', '#0000ff']);
     expect(p.neutralAnchors).toEqual(['#123456']);
   });
 
   it('caps anchors at MAX_ANCHORS', () => {
-    const p = parseStudioParams(params('?p=%23ff0000&p2=%2300ff00&p3=%230000ff&p4=%23ffffff&p5=%23111111'));
+    const p = stateFromParams(params('?p=%23ff0000&p2=%2300ff00&p3=%230000ff&p4=%23ffffff&p5=%23111111'));
     expect(p.primaryAnchors).toHaveLength(4);
   });
 
   it('decodes base64 configs and ignores malformed ones', () => {
     const cfg = btoa(JSON.stringify({ contrastMode: 'none' }));
     const bad = btoa('not-json');
-    const p = parseStudioParams(params(`?pcfg=${cfg}&ncfg=${bad}`));
+    const p = stateFromParams(params(`?pcfg=${cfg}&ncfg=${bad}`));
     expect(p.primaryConfig.contrastMode).toBe('none');
     expect(p.neutralConfig.contrastMode).toBe('apca'); // fallback intact
   });
 
   it('accepts valid presets and ignores unknown ones', () => {
-    const p = parseStudioParams(params('?ppreset=violet&npreset=not-a-family'));
+    const p = stateFromParams(params('?ppreset=violet&npreset=not-a-family'));
     expect(p.primaryPreset).toBe('violet');
     expect(p.neutralPreset).toBeNull();
   });
 
   it('falls back to the preset 500 shade when only a preset is given', () => {
-    const p = parseStudioParams(params('?ppreset=violet'));
+    const p = stateFromParams(params('?ppreset=violet'));
     expect(p.primaryAnchors).toEqual(['#8b5cf6']); // violet-500
   });
 
   it('maps ntint to the enum and ignores junk values', () => {
-    expect(parseStudioParams(params('?ntint=primary')).neutralTint).toBe('primary');
-    expect(parseStudioParams(params('?ntint=own')).neutralTint).toBe('own');
-    expect(parseStudioParams(params('?ntint=zzz')).neutralTint).toBe('own');
+    expect(stateFromParams(params('?ntint=primary')).neutralTint).toBe('primary');
+    expect(stateFromParams(params('?ntint=own')).neutralTint).toBe('own');
+    expect(stateFromParams(params('?ntint=zzz')).neutralTint).toBe('own');
+  });
+});
+
+describe('paramsFromState', () => {
+  const SEEDED = '?p=%23895af6&p2=%2314b8a6&n=%2371717a&pcfg=eyJjb250cmFzdE1vZGUiOiJub25lIn0=&ntint=primary&ppreset=violet&npreset=stone';
+
+  it('round-trips through stateFromParams', () => {
+    const seeded = stateFromParams(params(SEEDED));
+    const roundTripped = stateFromParams(paramsFromState(seeded));
+    expect(roundTripped).toEqual(seeded);
+  });
+
+  it('serializes every param the studio URL carries', () => {
+    const seeded = stateFromParams(params(SEEDED));
+    const q = paramsFromState(seeded);
+    expect(q.get('p')).toBe('#895af6');
+    expect(q.get('p2')).toBe('#14b8a6');
+    expect(q.get('n')).toBe('#71717a');
+    // the full config is serialized (the seed's partial config merged over defaults)
+    expect(JSON.parse(atob(q.get('pcfg')!))).toMatchObject({ contrastMode: 'none' });
+    expect(q.get('ntint')).toBe('primary');
+    expect(q.get('ppreset')).toBe('violet');
+    expect(q.get('npreset')).toBe('stone');
+  });
+
+  it('includes dark only when set', () => {
+    const lit = stateFromParams(params(''));
+    expect(paramsFromState({ ...lit, dark: false }).has('dark')).toBe(false);
+    expect(paramsFromState({ ...lit, dark: true }).get('dark')).toBe('1');
   });
 });
 
@@ -72,7 +102,7 @@ describe('generatePrimary', () => {
     const { scale, error } = generatePrimary({
       preset: null,
       anchors: [DEFAULT_PRIMARY_ANCHOR],
-      config: parseStudioParams(params('')).primaryConfig,
+      config: stateFromParams(params('')).primaryConfig,
     });
     expect(error).toBeNull();
     expect(scale!.steps).toHaveLength(11);
@@ -80,14 +110,14 @@ describe('generatePrimary', () => {
   });
 
   it('an active preset short-circuits to the exact Tailwind scale', () => {
-    const { scale, error } = generatePrimary({ preset: 'violet', anchors: ['#000000'], config: parseStudioParams(params('')).primaryConfig });
+    const { scale, error } = generatePrimary({ preset: 'violet', anchors: ['#000000'], config: stateFromParams(params('')).primaryConfig });
     expect(error).toBeNull();
     expect(hexes(scale!).get('500')).toBe('#8b5cf6');
     expect(scale!.closestFamily).toBe('Violet');
   });
 
   it('surfaces engine errors instead of throwing', () => {
-    const { scale, error } = generatePrimary({ preset: null, anchors: ['zzz'], config: parseStudioParams(params('')).primaryConfig });
+    const { scale, error } = generatePrimary({ preset: null, anchors: ['zzz'], config: stateFromParams(params('')).primaryConfig });
     expect(scale).toBeNull();
     expect(error).toContain('Unparseable color');
   });
@@ -95,7 +125,7 @@ describe('generatePrimary', () => {
 
 describe('generateNeutral', () => {
   it('tint borrow: the neutral scale follows the primary hue', () => {
-    const p = parseStudioParams(params('?p=%23ff0000&n=%23a49aa8&ntint=primary'));
+    const p = stateFromParams(params('?p=%23ff0000&n=%23a49aa8&ntint=primary'));
     const tinted = generateNeutral({
       preset: null,
       anchors: p.neutralAnchors,
@@ -122,7 +152,7 @@ describe('generateNeutral', () => {
   });
 
   it('skips tint when the primary anchor is unparseable (no crash)', () => {
-    const p = parseStudioParams(params('?p=zzz&n=%23a49aa8&ntint=primary'));
+    const p = stateFromParams(params('?p=zzz&n=%23a49aa8&ntint=primary'));
     const { scale, error } = generateNeutral({
       preset: null,
       anchors: p.neutralAnchors,
@@ -138,7 +168,7 @@ describe('generateNeutral', () => {
     const { scale } = generateNeutral({
       preset: 'zinc',
       anchors: [DEFAULT_NEUTRAL_ANCHOR],
-      config: parseStudioParams(params('')).neutralConfig,
+      config: stateFromParams(params('')).neutralConfig,
       tint: 'own',
       primaryAnchors: [],
     });

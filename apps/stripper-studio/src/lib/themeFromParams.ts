@@ -85,11 +85,11 @@ function presetAnchorHex(familyId: string | null): string | undefined {
 }
 
 /**
- * Parse a studio URL query into the full param state. Absent params fall back
- * to defaults; anchors fall back to the active preset's 500 shade so URL-only
- * presets stay self-consistent.
+ * Derive the full param state from a studio URL query. Absent params fall
+ * back to defaults; anchors fall back to the active preset's 500 shade so
+ * URL-only presets stay self-consistent.
  */
-export function parseStudioParams(q: URLSearchParams): StudioParams {
+export function stateFromParams(q: URLSearchParams): StudioParams {
   const primaryPreset = q.has('ppreset') ? presetFromUrl(q, 'ppreset') : null;
   const neutralPreset = q.has('npreset') ? presetFromUrl(q, 'npreset') : null;
   const p = q.get('p');
@@ -106,6 +106,28 @@ export function parseStudioParams(q: URLSearchParams): StudioParams {
     primaryPreset,
     neutralPreset,
   };
+}
+
+/**
+ * Serialize the param state back into studio URL params — the inverse of
+ * {@link stateFromParams}. `dark` (UI chrome) is only included when set; the
+ * /api/colors endpoint tolerates its presence either way.
+ */
+export function paramsFromState(
+  state: StudioParams & { dark?: boolean },
+): URLSearchParams {
+  const q = new URLSearchParams();
+  q.set('p', state.primaryAnchors[0]!);
+  state.primaryAnchors.slice(1).forEach((hex, i) => q.set(`p${i + 2}`, hex));
+  q.set('n', state.neutralAnchors[0]!);
+  state.neutralAnchors.slice(1).forEach((hex, i) => q.set(`n${i + 2}`, hex));
+  q.set('pcfg', btoa(JSON.stringify(state.primaryConfig)));
+  q.set('ncfg', btoa(JSON.stringify(state.neutralConfig)));
+  q.set('ntint', state.neutralTint);
+  if (state.dark) q.set('dark', '1');
+  if (state.primaryPreset) q.set('ppreset', state.primaryPreset);
+  if (state.neutralPreset) q.set('npreset', state.neutralPreset);
+  return q;
 }
 
 /** Primary scale: exact-preset family short-circuit, then generated from anchors. */
@@ -164,7 +186,7 @@ export interface ThemeResult {
 
 /** Derive the color scales from a studio URL query — the same derivation the studio UI performs. */
 export function themeFromParams(q: URLSearchParams): ThemeResult {
-  const p = parseStudioParams(q);
+  const p = stateFromParams(q);
   const primary = generatePrimary({ preset: p.primaryPreset, anchors: p.primaryAnchors, config: p.primaryConfig });
   const neutral = generateNeutral({
     preset: p.neutralPreset,

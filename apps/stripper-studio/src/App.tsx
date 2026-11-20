@@ -1,6 +1,8 @@
 import { useMemo, useRef, useState, type ChangeEvent, type ReactNode } from 'react';
 import { type ThemeScales } from 'stripper';
 import { useStudio } from '@/context/StudioState';
+import { paramsFromState } from '@/lib/themeFromParams';
+import { useClipboard } from '@/hooks/useClipboard';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -37,6 +39,14 @@ function Studio() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [loadError, setLoadError] = useState(false);
   const errorTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const { copyText, lastCopied } = useClipboard();
+
+  /** The /api/colors link for the CURRENT state — fresh even before the debounced URL sync. */
+  const apiLink = useMemo(() => {
+    const q = paramsFromState(state);
+    q.delete('dark'); // UI chrome — the endpoint ignores it anyway
+    return `${window.location.origin}/api/colors?${q.toString()}`;
+  }, [state]);
 
   async function onConfigFile(e: ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -87,6 +97,14 @@ function Studio() {
               Load config
             </Button>
             <input ref={fileInputRef} type="file" accept=".json,application/json" className="hidden" onChange={onConfigFile} />
+            <Button
+              variant="outline"
+              size="sm"
+              title="Copy the /api/colors link for the current color scales"
+              onClick={() => copyText(apiLink)}
+            >
+              {lastCopied ? 'Copied!' : 'Copy API link'}
+            </Button>
             <Button variant="ghost" size="sm" onClick={toggleDark}>
               {state.dark ? 'Light' : 'Dark'}
             </Button>

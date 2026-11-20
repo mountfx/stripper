@@ -21,7 +21,8 @@ import {
   DEFAULTS,
   generateNeutral,
   generatePrimary,
-  parseStudioParams,
+  paramsFromState,
+  stateFromParams,
   type NeutralTint,
   type ScaleResult,
 } from '@/lib/themeFromParams';
@@ -78,17 +79,8 @@ const FocusContext = createContext<FocusContextValue | null>(null);
 export function StudioProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<StudioState>(() => {
     const q = new URLSearchParams(window.location.search);
-    const params = parseStudioParams(q);
-    return {
-      primaryAnchors: params.primaryAnchors,
-      neutralAnchors: params.neutralAnchors,
-      primaryConfig: params.primaryConfig,
-      neutralConfig: params.neutralConfig,
-      neutralTint: params.neutralTint,
-      dark: q.get('dark') === '1',
-      primaryPreset: params.primaryPreset,
-      neutralPreset: params.neutralPreset,
-    };
+    const params = stateFromParams(q);
+    return { ...params, dark: q.get('dark') === '1' };
   });
 
   const [focused, setFocusedState] = useState<{ key: ScaleKey; step: ScaleStepNumber } | null>(null);
@@ -215,17 +207,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
       return;
     }
     const timer = setTimeout(() => {
-      const q = new URLSearchParams();
-      q.set('p', state.primaryAnchors[0]!);
-      state.primaryAnchors.slice(1).forEach((hex, i) => q.set(`p${i + 2}`, hex));
-      q.set('n', state.neutralAnchors[0]!);
-      state.neutralAnchors.slice(1).forEach((hex, i) => q.set(`n${i + 2}`, hex));
-      q.set('pcfg', btoa(JSON.stringify(state.primaryConfig)));
-      q.set('ncfg', btoa(JSON.stringify(state.neutralConfig)));
-      q.set('ntint', state.neutralTint);
-      if (state.dark) q.set('dark', '1');
-      if (state.primaryPreset) q.set('ppreset', state.primaryPreset);
-      if (state.neutralPreset) q.set('npreset', state.neutralPreset);
+      const q = paramsFromState(state);
       window.history.replaceState(null, '', `${window.location.pathname}?${q.toString()}`);
     }, 300);
     return () => clearTimeout(timer);
