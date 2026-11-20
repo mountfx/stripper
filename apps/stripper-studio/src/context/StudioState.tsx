@@ -10,29 +10,26 @@ import {
   type ReactNode,
 } from 'react';
 import {
-  defaultConfig,
   familyById,
-  generateScale,
-  oklchOf,
-  scaleFromFamily,
   TAILWIND_FAMILIES,
-  type Scale,
   type ScaleConfig,
   type ScaleStepNumber,
 } from 'stripper';
 import { formatHex as culoriFormatHex } from 'culori';
 import { MAX_ANCHORS, parseConfigJson } from '@/lib/configExport';
+import {
+  DEFAULTS,
+  generateNeutral,
+  generatePrimary,
+  parseStudioParams,
+  type NeutralTint,
+  type ScaleResult,
+} from '@/lib/themeFromParams';
 
 export { MAX_ANCHORS };
-
-/**
- * App-layer role defaults: the engine default (balanced curve + consistent
- * APCA contrast) for both scales; the neutral keeps tint 'own'.
- */
-const DEFAULTS: ScaleConfig = defaultConfig();
+export type { NeutralTint };
 
 export type ScaleKey = 'primary' | 'neutral';
-export type NeutralTint = 'own' | 'primary';
 
 export interface StudioState {
   primaryAnchors: string[];
@@ -46,92 +43,14 @@ export interface StudioState {
   neutralPreset: string | null;
 }
 
-export interface ScaleResult {
-  scale: Scale | null;
-  error: string | null;
-}
-
-/**
- * Migrate legacy URL configs that still carry the old `consistentContrast`
- * boolean to the `contrastMode` enum.
- */
-export function migrateLegacyConfig(
-  raw: Partial<ScaleConfig> & { consistentContrast?: boolean },
-): Partial<ScaleConfig> {
-  const { consistentContrast, ...rest } = raw;
-  if (typeof consistentContrast === 'boolean') {
-    rest.contrastMode = consistentContrast ? 'apca' : 'none';
-  }
-  return rest;
-}
-
-function decodeConfig(param: string | null, fallback: ScaleConfig): ScaleConfig | null {
-  if (!param) return null;
-  try {
-    const parsed = JSON.parse(atob(param)) as Partial<ScaleConfig> & { consistentContrast?: boolean };
-    return { ...fallback, ...migrateLegacyConfig(parsed) };
-  } catch {
-    return null;
-  }
-}
-
-function anchorsFromUrl(q: URLSearchParams, first: string, extraPrefix: string): string[] {
-  const anchors = [first];
-  for (let i = 2; i <= MAX_ANCHORS; i++) {
-    const extra = q.get(`${extraPrefix}${i}`);
-    if (extra) anchors.push(extra);
-  }
-  return anchors;
-}
-
-function presetFromUrl(q: URLSearchParams, param: string): string | null {
-  const id = q.get(param);
-  return id && familyById(id) ? id : null;
-}
-
-/** The 500-shade hex of a preset family (null-safe). */
-function presetAnchorHex(familyId: string | null): string | undefined {
-  return familyId ? familyById(familyId)?.shades.find((shade) => shade.number === 500)?.hex : undefined;
-}
-
-function loadFromUrl(): Partial<StudioState> | null {
-  const q = new URLSearchParams(window.location.search);
-  if (!q.has('p') && !q.has('n') && !q.has('pcfg') && !q.has('ncfg') && !q.has('ppreset') && !q.has('npreset'))
-    return null;
-  const state: Partial<StudioState> = {};
-  const p = q.get('p');
-  const n = q.get('n');
-  if (p) state.primaryAnchors = anchorsFromUrl(q, p, 'p');
-  if (n) state.neutralAnchors = anchorsFromUrl(q, n, 'n');
-  const pcfg = decodeConfig(q.get('pcfg'), DEFAULTS);
-  if (pcfg) state.primaryConfig = pcfg;
-  const ncfg = decodeConfig(q.get('ncfg'), DEFAULTS);
-  if (ncfg) state.neutralConfig = ncfg;
-  const tint = q.get('ntint');
-  if (tint === 'own' || tint === 'primary') state.neutralTint = tint;
-  state.dark = q.get('dark') === '1';
-  if (q.has('ppreset')) state.primaryPreset = presetFromUrl(q, 'ppreset');
-  if (q.has('npreset')) state.neutralPreset = presetFromUrl(q, 'npreset');
-  return state;
-}
-
-function tryGenerate(anchors: string[], config: ScaleConfig): ScaleResult {
-  try {
-    return { scale: generateScale(anchors, config), error: null };
-  } catch (e) {
-    return { scale: null, error: e instanceof Error ? e.message : String(e) };
-  }
-}
-
 export interface StudioContextValue {
   state: StudioState;
   /**
    * Deferred copy of the state: expensive derived UI (scale generation, charts,
    * contrast matrix, exports) follows this at transition priority so urgent
-   * updates (slider drags, text inputs) stay responsive.
+   * updates (slider drags, hex inputs) stay instant.
    */
   deferredState: StudioState;
-  /** deferred-derived results — recompute at transition priority */
   primaryResult: ScaleResult;
   neutralResult: ScaleResult;
   setAnchors(key: ScaleKey, anchors: string[]): void;
@@ -147,7 +66,7 @@ export interface StudioContextValue {
 }
 
 export interface FocusContextValue {
-  /** the scale step (50–950) currently hovered within a scale — shared by strip, charts */
+  /** the scale step (50–950) currently hovered within a scale — shared by strip and charts */
   focused: { key: ScaleKey; step: ScaleStepNumber } | null;
   setFocused(key: ScaleKey, step: ScaleStepNumber): void;
   clearFocused(key: ScaleKey): void;
@@ -158,21 +77,17 @@ const FocusContext = createContext<FocusContextValue | null>(null);
 
 export function StudioProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<StudioState>(() => {
-    const urlState = loadFromUrl();
-    // no presets by default (generated scales); URL preset values win,
-    // including an explicit null; anchors fall back to the active preset's
-    // 500 shade so URL-only presets stay self-consistent
-    const primaryPreset = urlState && 'primaryPreset' in urlState ? urlState.primaryPreset! : null;
-    const neutralPreset = urlState && 'neutralPreset' in urlState ? urlState.neutralPreset! : null;
+    const q = new URLSearchParams(window.location.search);
+    const params = parseStudioParams(q);
     return {
-      primaryAnchors: urlState?.primaryAnchors ?? [presetAnchorHex(primaryPreset) ?? '#b766dc'],
-      neutralAnchors: urlState?.neutralAnchors ?? [presetAnchorHex(neutralPreset) ?? '#a49aa8'],
-      primaryConfig: urlState?.primaryConfig ?? { ...DEFAULTS },
-      neutralConfig: urlState?.neutralConfig ?? { ...DEFAULTS },
-      neutralTint: urlState?.neutralTint ?? 'own',
-      dark: urlState?.dark ?? false,
-      primaryPreset,
-      neutralPreset,
+      primaryAnchors: params.primaryAnchors,
+      neutralAnchors: params.neutralAnchors,
+      primaryConfig: params.primaryConfig,
+      neutralConfig: params.neutralConfig,
+      neutralTint: params.neutralTint,
+      dark: q.get('dark') === '1',
+      primaryPreset: params.primaryPreset,
+      neutralPreset: params.neutralPreset,
     };
   });
 
@@ -259,35 +174,33 @@ export function StudioProvider({ children }: { children: ReactNode }) {
     setFocusedState((current) => (current?.key === key ? null : current));
   }, []);
 
-  const primaryResult = useMemo<ScaleResult>(() => {
-    if (deferredState.primaryPreset) {
-      const family = familyById(deferredState.primaryPreset);
-      if (family) return { scale: scaleFromFamily(family), error: null };
-    }
-    return tryGenerate(deferredState.primaryAnchors, deferredState.primaryConfig);
-  }, [deferredState.primaryAnchors, deferredState.primaryConfig, deferredState.primaryPreset]);
+  const primaryResult = useMemo<ScaleResult>(
+    () =>
+      generatePrimary({
+        preset: deferredState.primaryPreset,
+        anchors: deferredState.primaryAnchors,
+        config: deferredState.primaryConfig,
+      }),
+    [deferredState.primaryPreset, deferredState.primaryAnchors, deferredState.primaryConfig],
+  );
 
-  const neutralResult = useMemo<ScaleResult>(() => {
-    if (deferredState.neutralPreset) {
-      const family = familyById(deferredState.neutralPreset);
-      if (family) return { scale: scaleFromFamily(family), error: null };
-    }
-    let config = deferredState.neutralConfig;
-    // tint only applies to single-anchor scales (carve-out)
-    if (deferredState.neutralTint === 'primary' && deferredState.neutralAnchors.length === 1) {
-      const primaryHue = oklchOf(deferredState.primaryAnchors[0]!).h;
-      if (Number.isFinite(primaryHue)) {
-        config = { ...config, hue: { ...config.hue, tint: primaryHue } };
-      }
-    }
-    return tryGenerate(deferredState.neutralAnchors, config);
-  }, [
-    deferredState.neutralAnchors,
-    deferredState.neutralConfig,
-    deferredState.neutralPreset,
-    deferredState.neutralTint,
-    deferredState.primaryAnchors,
-  ]);
+  const neutralResult = useMemo<ScaleResult>(
+    () =>
+      generateNeutral({
+        preset: deferredState.neutralPreset,
+        anchors: deferredState.neutralAnchors,
+        config: deferredState.neutralConfig,
+        tint: deferredState.neutralTint,
+        primaryAnchors: deferredState.primaryAnchors,
+      }),
+    [
+      deferredState.neutralPreset,
+      deferredState.neutralAnchors,
+      deferredState.neutralConfig,
+      deferredState.neutralTint,
+      deferredState.primaryAnchors,
+    ],
+  );
 
   // ---- dark mode -----------------------------------------------------------------
   useEffect(() => {

@@ -4,7 +4,8 @@ import userEvent from '@testing-library/user-event';
 import { useState } from 'react';
 import type { ScaleStepNumber } from 'stripper';
 import App from '../src/App';
-import { StudioProvider, useStudio, useFocus, migrateLegacyConfig } from '../src/context/StudioState';
+import { StudioProvider, useStudio, useFocus } from '../src/context/StudioState';
+import { migrateLegacyConfig } from '../src/lib/themeFromParams';
 import { buildConfigJson, parseConfigJson } from '../src/lib/configExport';
 import { defaultConfig, type Scale } from 'stripper';
 
