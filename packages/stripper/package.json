@@ -22,7 +22,8 @@
     }
   },
   "files": [
-    "dist"
+    "dist",
+    "THIRD-PARTY-NOTICES.md"
   ],
   "scripts": {
     "build": "tsup",

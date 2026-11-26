@@ -340,3 +340,9 @@ stepIndex(step): number
 canonical `apca-w3` oracle, APCA ladder adherence (±2 Lc), WCAG ladder adherence
 (±0.1 ratio), multi-anchor pin/transition/conflict behavior, gamut safety, and
 export snapshots.
+
+## Licenses
+
+MIT for this package (`LICENSE`). The bundled `culori` color library is MIT
+(© Dan Burzo) — see [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md) for the
+bundled third-party code, palette data provenance, and APCA attribution.
