@@ -5,6 +5,9 @@
   "engines": {
     "node": ">=20"
   },
+  "pnpm": {
+    "onlyBuiltDependencies": ["deno"]
+  },
   "scripts": {
     "test": "pnpm -r test",
     "typecheck": "pnpm -r typecheck",
@@ -12,6 +15,7 @@
     "studio": "pnpm --filter stripper-studio dev",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
+    "docs:lint": "pnpm -r docs:lint",
     "test:coverage": "pnpm -r test:coverage"
   },
   "devDependencies": {

@@ -1,6 +1,6 @@
 {
   "name": "@mountfx/stripper",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Framework-agnostic engine that generates Tailwind-style 11-step color scales (50-950) from brand colors, with consistent-contrast ladders (APCA Lc, WCAG 2.2) built into the generation pipeline.",
   "license": "MIT",
   "type": "module",
@@ -29,7 +29,8 @@
     "prepack": "pnpm build",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "docs:lint": "deno doc --lint src/index.ts"
   },
   "repository": {
     "type": "git",
@@ -60,6 +61,7 @@
     "@types/node": "^22.10.0",
     "apca-w3": "^0.1.9",
     "culori": "^4.0.2",
+    "deno": "^2.6.0",
     "tsup": "^8.0.0",
     "typescript": "^5.7.0",
     "vitest": "^3.0.0"

@@ -79,7 +79,10 @@ APCA licensing): `packages/stripper/README.md` → "Design principles".
 - Tests are the spec for behavior changes; keep the engine's golden-value
   parity (apca-w3 dev oracle), ladder adherence (±2 Lc), and the studio's
   invariant tests green.
-- Verify with `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build` (CI runs
-  exactly these; see `.github/workflows/ci.yml`).
+- Verify with `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`, and
+  `pnpm docs:lint` (CI runs exactly these; see `.github/workflows/ci.yml`).
+  Pushing to `main` also publishes `@mountfx/stripper` to JSR (idempotent per
+  version; provenance via OIDC). Bump the version in `package.json` and
+  `jsr.json` together to release.
 - No legacy support for superseded URL/config formats beyond the deliberate
   `consistentContrast` migration; remove dead code rather than documenting it.

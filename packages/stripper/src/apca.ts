@@ -20,6 +20,7 @@ import { parse, converter } from 'culori';
 
 const toRgb = converter('rgb');
 
+/** The published 0.0.98G-4g constant set (see the module doc for compliance notes). */
 export const APCA_098G4G = {
   mainTRC: 2.4,
   sRco: 0.2126729,

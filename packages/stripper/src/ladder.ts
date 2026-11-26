@@ -10,6 +10,7 @@ import { wcagLuminance } from './wcag';
 import { targetFor, wcagTargetFor } from './targets';
 import type { ContrastMode, ScaleConfig, ScaleStep, Oklch, ScaleStepNumber } from './types';
 
+/** The lightness boundary where a contrast ladder is exactly met (see {@link ladderBoundaryL}). */
 export interface LadderBoundary {
   /** lightness at which the ladder is exactly met (meaningful only when reachable) */
   l: number;
@@ -33,17 +34,27 @@ export function withinTolerance(
   return value >= target - tolerance;
 }
 
-interface ContrastModeDef {
+/** The per-mode plumbing behind {@link CONTRAST_MODES}: screen-luminance transfer curve, contrast metric, fixed per-step target/background, and generation tolerance. */
+export interface ContrastModeDef {
   /** screen-luminance Y of sRGB channels (model-specific transfer curve) */
   yOf: (rgb: { r: number; g: number; b: number }) => number;
   /** contrast value from screen-luminance Y values (text Y, background Y) */
   metricY: (yText: number, yBackground: number) => number;
+  /** the fixed ladder target for a step (signed Lc or ratio, per mode) */
   target: (step: ScaleStepNumber) => number;
+  /** the reference background for a step ('black' below 500, 'white' at/above) */
   bg: (step: ScaleStepNumber) => 'black' | 'white';
+  /** generation tolerance around the target (±2 Lc / ±0.1 ratio) */
   tolerance: number;
+  /** metric label used in warnings ("Lc" / "ratio") */
   label: string;
 }
 
+/**
+ * Per contrast-mode plumbing: the screen-luminance transfer curve, the contrast
+ * metric, the fixed target/background per step, and the generation tolerance
+ * (±2 Lc / ±0.1 ratio). Not configurable — the ladders are the system's contract.
+ */
 export const CONTRAST_MODES: Record<
   Exclude<ContrastMode, 'none'>,
   ContrastModeDef

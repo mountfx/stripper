@@ -13,6 +13,7 @@ export const inSrgb = (color: ColorInput): boolean => srgbTest(color as Paramete
 const toOklch = converter('oklch');
 const toHsl = converter('hsl');
 
+/** Normalize a hue to 0..360. */
 export function clampHue(h: number): number {
   let out = h % 360;
   if (out < 0) out += 360;
@@ -37,6 +38,7 @@ export function gamutClamp(ok: Oklch): Oklch {
   return { l: ok.l, c: lo, h: ok.h };
 }
 
+/** Hex (#rrggbb) of an Oklch color, gamut-clamped. */
 export function stepToHex(ok: Oklch): string {
   return formatHex({ mode: 'oklch', l: ok.l, c: ok.c, h: ok.h }) ?? '#000000';
 }
@@ -68,6 +70,7 @@ export function maxSrgbChroma(l: number, h: number): number {
   return lo;
 }
 
+/** Linear interpolation. */
 export function lerp(a: number, b: number, t: number): number {
   return a + (b - a) * t;
 }

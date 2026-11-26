@@ -9,9 +9,25 @@ const toOklch = converter('oklch');
 const toHsl = converter('hsl');
 import { SCALE_STEPS, type Scale, type ScaleStepNumber } from './types';
 
-export interface FamilyShade { number: ScaleStepNumber; hex: string }
-export interface ColorFamily { name: string; id: string; shades: FamilyShade[] }
+/** One hex shade of a Tailwind family. */
+export interface FamilyShade {
+  /** step number (50–950) */
+  number: ScaleStepNumber;
+  /** sRGB hex, e.g. "#3b82f6" */
+  hex: string;
+}
 
+/** A Tailwind CSS v4 color family: 11 hex shades, 50–950. */
+export interface ColorFamily {
+  /** display name, e.g. "Blue" */
+  name: string;
+  /** lowercase id, e.g. "blue" */
+  id: string;
+  /** the 11 shades, in step order */
+  shades: FamilyShade[];
+}
+
+/** All 22 Tailwind v4 default color families (provenance in the module doc). */
 export const TAILWIND_FAMILIES: ColorFamily[] = [
   { name: "Red", id: "red", shades: [
     { number: 50, hex: "#fef2f2" },
@@ -301,6 +317,7 @@ export const TAILWIND_FAMILIES: ColorFamily[] = [
   ] },
 ];
 
+/** The five pure-gray Tailwind families (zero chroma). */
 export const GRAY_FAMILY_NAMES: Set<string> = new Set(['Slate', 'Gray', 'Zinc', 'Neutral', 'Stone']);
 
 /**
@@ -338,9 +355,11 @@ function buildProfile(names: string[]): FamilyProfile {
   return { l, c };
 }
 
+/** Averaged OKLCH L/C curve over the chromatic families; powers the balancedCurve base mode. */
 export const CHROMATIC_PROFILE: FamilyProfile = buildProfile(
   TAILWIND_FAMILIES.filter((f) => !GRAY_FAMILY_NAMES.has(f.name)).map((f) => f.name),
 );
+/** Averaged OKLCH L/C curve over the gray families; the neutral fallback curve. */
 export const GRAY_PROFILE: FamilyProfile = buildProfile([...GRAY_FAMILY_NAMES]);
 
 const FAMILY_BY_ID = new Map(TAILWIND_FAMILIES.map((f) => [f.id, f]));

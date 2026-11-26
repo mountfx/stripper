@@ -81,6 +81,7 @@ function taperFactor(
   return 1;
 }
 
+/** The engine defaults: balanced curve, APCA ladder on, no tint, no shaping. */
 export function defaultConfig(): ScaleConfig {
   return {
     baseMode: 'balancedCurve',

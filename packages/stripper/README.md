@@ -25,7 +25,7 @@ every modern bundler.
 ## Quick start
 
 ```ts
-import { generateScale, toThemeCss } from 'stripper';
+import { generateScale, toThemeCss } from '@mountfx/stripper';
 
 const scale = generateScale('#895af6'); // balanced curve + consistent APCA contrast
 const neutral = generateScale('#798680', { ...defaultConfig(), contrastMode: 'none' });
@@ -242,6 +242,7 @@ ladderBoundaryL(h, c, step, contrastMode, toleranceOverride?): { l: number; reac
 // relaxes or zeroes the boundary edge (0 = exact target).
 
 CONTRAST_MODES                          // per-mode tolerance map (±2 Lc / ±0.1 ratio)
+ContrastModeDef                         // the record type behind CONTRAST_MODES
 solveLightnessFor(...), withinTolerance(...), resolveLadderAnchorStep(...)
 // lower-level ladder / anchor-placement internals, exported for advanced use
 ```

@@ -7,18 +7,15 @@ const toHsl = converter('hsl');
 const toLab = converter('lab');
 const toRgb = converter('rgb');
 
+/** The Tailwind family an input color belongs to, plus its anchor step. */
 export interface LocatedScale {
+  /** the closest {@link ColorFamily} */
   family: ColorFamily;
   /** step whose lightness is closest to the input lightness */
   anchorStep: ScaleStepNumber;
 }
 
-/**
- * uicolors-style family selection:
- * - input with HSL saturation > 0.15 compares against chromatic families only,
- *   otherwise only gray families (Slate/Gray/Zinc/Neutral/Stone).
- * - the family whose single closest shade (CIE76 Lab distance) is nearest wins.
- */
+/** Lab cache for family shades (the family data is immutable). */
 const shadeLabCache = new Map<string, { l: number; a: number; b: number }>();
 
 function labOfHex(hex: string): { l: number; a: number; b: number } {
@@ -30,6 +27,12 @@ function labOfHex(hex: string): { l: number; a: number; b: number } {
   return lab;
 }
 
+/**
+ * uicolors-style family selection:
+ * - input with HSL saturation > 0.15 compares against chromatic families only,
+ *   otherwise only gray families (Slate/Gray/Zinc/Neutral/Stone).
+ * - the family whose single closest shade (CIE76 Lab distance) is nearest wins.
+ */
 export function pickClosestFamily(inputHex: string): LocatedScale {
   const hsl = toHsl(parse(inputHex))!;
   const grayish = (hsl.s ?? 0) <= 0.15;

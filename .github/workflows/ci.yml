@@ -9,23 +9,38 @@ jobs:
   verify:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-
-      - uses: pnpm/action-setup@v4
-        with:
-          package_json_file: package.json
-
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v6
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: pnpm
-
       - run: pnpm install --frozen-lockfile
-
       - run: pnpm lint
-
-      - run: pnpm -r typecheck
-
-      - run: pnpm -r test
-
+      - run: pnpm typecheck
+      - run: pnpm test
       - run: pnpm build
+      - run: pnpm docs:lint
+
+  # Publishes @mountfx/stripper to JSR with provenance (OIDC, no token secret).
+  # Idempotent: jsr publish is a no-op when jsr.json's version is already published.
+  publish:
+    needs: verify
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # The OIDC ID token is used for authentication with JSR.
+    concurrency:
+      group: jsr-publish
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v6
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: npx --yes jsr publish
+        working-directory: packages/stripper

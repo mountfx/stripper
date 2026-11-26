@@ -60,6 +60,7 @@ export function bgHexFor(step: ScaleStepNumber): string {
   return targetFor(step).bg === 'black' ? '#000000' : '#ffffff';
 }
 
+/** Zero-based index of a step in {@link SCALE_STEPS}; throws on an unknown step. */
 export function stepIndex(step: ScaleStepNumber): number {
   const i = SCALE_STEPS.indexOf(step);
   if (i === -1) throw new Error(`Unknown scale step: ${step}`);
