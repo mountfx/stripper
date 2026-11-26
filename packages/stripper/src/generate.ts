@@ -107,7 +107,7 @@ export function defaultConfig(): ScaleConfig {
  * auto-placed with warnings. Hue interpolates shortest-arc between adjacent
  * anchors and chroma follows a per-anchor scaling factor over the balanced
  * profile — anchor colors are reproduced exactly at their steps. Multi-anchor
- * scales always use the balanced skeleton: tailwindTransfer, hue drift/offset
+ * scales always use the balanced skeleton: tailwindTransfer, hue drift
  * and hue tint do not apply.
  */
 export function generateScale(input: string | Array<string | ScaleAnchor>, config?: ScaleConfig): Scale {

@@ -34,7 +34,8 @@ export function criticalPairWarnings(scale: Scale): string[] {
     if (!s) return;
     const value = txt === 'black' ? lcBlackOn(s.hex) : lcWhiteOn(s.hex);
     if (Math.abs(value) < minLc) {
-      messages.push(`${label}: |Lc| ${Math.abs(value).toFixed(0)} < ${minLc} (${txt} text on ${step})`);
+      // floor the magnitude in the message: rounding up could read "|Lc| 60 < 60"
+      messages.push(`${label}: |Lc| ${Math.floor(Math.abs(value))} < ${minLc} (${txt} text on ${step})`);
     }
   };
   check(600, 'white', 60, 'White text on 600 (primary button)');

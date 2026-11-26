@@ -1,14 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import {
-  clampHue,
-  displayableHueRange,
-  displayableLightnessRange,
-  maxSrgbChroma,
-  type Scale,
-  type ScaleStepNumber,
-} from 'stripper';
-import { useFocus, type ScaleKey } from '@/context/StudioState';
-import { monotoneSpline, traceExtents } from '@/lib/chartMath';
+import { clampHue, inSrgb, maxSrgbChroma, type Scale, type ScaleStepNumber } from '@mountfx/stripper';
+import { monotoneSpline, traceIsoContours } from '@/lib/chartMath';
+import { useFocus } from '@/context/StudioState';
 
 const LABEL: Record<string, string> = {
   l: 'Lightness (L)',
@@ -24,7 +17,8 @@ const SAMPLES = 36; // x-samples for the smooth curve and region tracing
 interface CurveChartProps {
   scale: Scale | null;
   metric: 'l' | 'c' | 'h';
-  scaleKey: ScaleKey;
+  /** the owning scheme's id — scopes hover focus to this scheme */
+  scaleKey: string;
 }
 
 export function CurveChart({ scale, metric, scaleKey }: CurveChartProps) {
@@ -116,9 +110,7 @@ export function CurveChart({ scale, metric, scaleKey }: CurveChartProps) {
     const y = (v: number) =>
       plotBottom - ((Math.min(Math.max(v, dmin), dmax) - dmin) / (dmax - dmin)) * (plotBottom - plotTop);
 
-    const minThickness = ((dmax - dmin) / (plotBottom - plotTop)) * 1.5; // ~1.5px in value units
-
-    return { W, steps, n, colWidth, xStep, samples, hueUnwrapped: hue, ceilings, metricValue, dmin, dmax, y, minThickness };
+    return { W, steps, n, colWidth, xStep, samples, hueUnwrapped: hue, ceilings, metricValue, dmin, dmax, y, splineL, splineC, splineH };
   }, [scale, width, metric]);
 
   // ---- curve + dots -------------------------------------------------------------------
@@ -164,65 +156,85 @@ export function CurveChart({ scale, metric, scaleKey }: CurveChartProps) {
     }));
   }, [chart]);
 
-  // ---- region tracing: ONE closed smooth polygon per constraint region ----------------
+  // ---- region tracing: Stripe-style constraint regions --------------------------------
 
   const regionTraces = useMemo<string[]>(() => {
     const c = chart;
     if (!c) return [];
-    const xs = c.samples.map((s) => s.t * c.W);
     const traces: string[] = [];
 
-    if (metric === 'l') {
-      // per sample: displayable range (gray hatch outside of it)
-      const lo: Array<number | null> = [];
-      const hi: Array<number | null> = [];
-      for (const s of c.samples) {
-        const range = displayableLightnessRange(s.C, clampHue(s.H));
-        if (!range) {
-          lo.push(null);
-          hi.push(null);
-          continue;
-        }
-        lo.push(range.lo);
-        hi.push(range.hi);
+    /**
+     * Hatches the literal out-of-gamut set as smooth closed contours on a 2D
+     * displayability grid — islands and holes included. No keep-clear channel:
+     * the line draws on top of the hatch and crosses it wherever the curve's
+     * own (interpolated) color is out of gamut, exactly like Stripe's
+     * visualizer. Columns where nothing is displayable hatch full-height, so
+     * regions merge through gamut-tip overshoots instead of tearing apart.
+     * The same continuous predicate samples the grid nodes and refines the
+     * contour crossings to subpixel precision (no lattice staircasing).
+     */
+    const gridTraces = (hatchAt: (x: number, py: number) => boolean): string | null => {
+      const COLS = 96;
+      const ROWS = 64;
+      const colX: number[] = [];
+      for (let i = 0; i < COLS; i++) colX.push((i / (COLS - 1)) * c.W);
+      const rowY: number[] = [];
+      const cells: boolean[][] = [];
+      for (let r = 0; r < ROWS; r++) {
+        const py = c.y(c.dmin + (r / (ROWS - 1)) * (c.dmax - c.dmin));
+        rowY.push(py);
+        const row: boolean[] = [];
+        for (let i = 0; i < COLS; i++) row.push(hatchAt(colX[i]!, py));
+        cells.push(row);
       }
-      // gamut regions (gray): below the displayable range and above it
-      traces.push(...traceExtents(xs, lo.map(() => c.dmin), lo, c.minThickness, c.y));
-      traces.push(...traceExtents(xs, hi, hi.map(() => c.dmax), c.minThickness, c.y));
+      const loops = traceIsoContours(cells, colX, rowY, 2, hatchAt);
+      if (loops.length === 0) return null;
+      return loops
+        .map((loop) => `M${loop.map(([x, py]) => `${x.toFixed(2)},${py.toFixed(2)}`).join('L')}Z`)
+        .join(' ');
+    };
+
+    /** the metric-axis value at pixel position (x, py) */
+    const valueAt = (x: number, py: number) =>
+      c.dmin + ((H - py) / H) * (c.dmax - c.dmin);
+
+    if (metric === 'l') {
+      const trace = gridTraces((x, py) => {
+        const t = x / c.W;
+        return !inSrgb({
+          mode: 'oklch',
+          l: valueAt(x, py),
+          c: Math.max(c.splineC(t), 0),
+          h: clampHue(c.splineH(t)),
+        });
+      });
+      if (trace) traces.push(trace);
     }
 
     if (metric === 'c') {
-      // gray above the displayable chroma ceiling
-      const lo: Array<number | null> = [];
-      const hi: Array<number | null> = [];
-      for (let i = 0; i < c.samples.length; i++) {
-        const ceiling = Math.min(c.ceilings[i]!, c.dmax);
-        lo.push(ceiling);
-        hi.push(c.dmax);
-      }
-      traces.push(...traceExtents(xs, lo, hi, c.minThickness, c.y));
+      const trace = gridTraces((x, py) => {
+        const t = x / c.W;
+        return !inSrgb({
+          mode: 'oklch',
+          l: c.splineL(t),
+          c: valueAt(x, py),
+          h: clampHue(c.splineH(t)),
+        });
+      });
+      if (trace) traces.push(trace);
     }
 
     if (metric === 'h') {
-      // gray above and below the displayable hue band anchored at the curve hue;
-      // a minimum channel around the line keeps it clear of the hatch even where
-      // the true displayable arc pinches to a knife edge near the gamut tip
-      const minHalf = (6 / H) * (c.dmax - c.dmin);
-      const belowLo: Array<number | null> = [];
-      const belowHi: Array<number | null> = [];
-      const aboveLo: Array<number | null> = [];
-      const aboveHi: Array<number | null> = [];
-      for (const s of c.samples) {
-        const band = displayableHueRange(s.L, s.C, s.H, c.dmin, c.dmax);
-        const lo = Math.min(band.lo, s.H - minHalf);
-        const hi = Math.max(band.hi, s.H + minHalf);
-        belowLo.push(c.dmin);
-        belowHi.push(lo > c.dmin ? lo : null);
-        aboveLo.push(hi < c.dmax ? hi : null);
-        aboveHi.push(c.dmax);
-      }
-      traces.push(...traceExtents(xs, belowLo, belowHi, c.minThickness, c.y));
-      traces.push(...traceExtents(xs, aboveLo, aboveHi, c.minThickness, c.y));
+      const trace = gridTraces((x, py) => {
+        const t = x / c.W;
+        return !inSrgb({
+          mode: 'oklch',
+          l: c.splineL(t),
+          c: Math.max(c.splineC(t), 0),
+          h: clampHue(valueAt(x, py)),
+        });
+      });
+      if (trace) traces.push(trace);
     }
 
     return traces;
@@ -241,7 +253,7 @@ export function CurveChart({ scale, metric, scaleKey }: CurveChartProps) {
   }, [hovered, chart, metric]);
 
   function isEnlarged(step: ScaleStepNumber, index: number): boolean {
-    return hovered === index || (focused?.key === scaleKey && focused.step === step);
+    return hovered === index || (focused?.id === scaleKey && focused.step === step);
   }
 
   function onDotEnter(index: number, step: ScaleStepNumber) {
@@ -291,12 +303,13 @@ export function CurveChart({ scale, metric, scaleKey }: CurveChartProps) {
             {/* plot background */}
             <rect x="0" y="0" width={width} height={H} className="fill-muted/0" />
 
-            {/* hatched constraint regions: one smooth shape per region */}
+            {/* hatched constraint regions: one smooth shape per region (hue: islands + holes via evenodd) */}
             {regionTraces.map((trace, ti) => (
               <path
                 key={`t${ti}`}
                 d={trace}
                 fill={`url(#hatch-gray-${scaleKey}-${metric})`}
+                fillRule="evenodd"
                 style={{ stroke: 'var(--chart-stroke)', strokeWidth: 1 }}
                 className="chart-region-gray"
               />

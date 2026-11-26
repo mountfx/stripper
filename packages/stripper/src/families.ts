@@ -301,7 +301,7 @@ export const TAILWIND_FAMILIES: ColorFamily[] = [
   ] },
 ];
 
-export const GRAY_FAMILY_NAMES = new Set(['Slate', 'Gray', 'Zinc', 'Neutral', 'Stone']);
+export const GRAY_FAMILY_NAMES: Set<string> = new Set(['Slate', 'Gray', 'Zinc', 'Neutral', 'Stone']);
 
 /**
  * Derived OKLCH profiles: per-step mean L and mean C across family groups.
@@ -338,10 +338,10 @@ function buildProfile(names: string[]): FamilyProfile {
   return { l, c };
 }
 
-export const CHROMATIC_PROFILE = buildProfile(
+export const CHROMATIC_PROFILE: FamilyProfile = buildProfile(
   TAILWIND_FAMILIES.filter((f) => !GRAY_FAMILY_NAMES.has(f.name)).map((f) => f.name),
 );
-export const GRAY_PROFILE = buildProfile([...GRAY_FAMILY_NAMES]);
+export const GRAY_PROFILE: FamilyProfile = buildProfile([...GRAY_FAMILY_NAMES]);
 
 const FAMILY_BY_ID = new Map(TAILWIND_FAMILIES.map((f) => [f.id, f]));
 

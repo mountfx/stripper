@@ -17,7 +17,7 @@
     "culori": "^4.0.2",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
-    "stripper": "workspace:*",
+    "@mountfx/stripper": "workspace:*",
     "tailwind-merge": "^3.7.0"
   },
   "devDependencies": {

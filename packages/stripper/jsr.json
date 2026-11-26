@@ -1,0 +1,11 @@
+{
+  "name": "@mountfx/stripper",
+  "version": "0.1.0",
+  "exports": "./src/index.ts",
+  "imports": {
+    "culori": "npm:culori@4.0.2"
+  },
+  "publish": {
+    "include": ["LICENSE", "README.md", "src/**/*.ts"]
+  }
+}

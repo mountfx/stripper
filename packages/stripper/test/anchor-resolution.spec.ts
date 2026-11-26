@@ -1,13 +1,13 @@
 import { describe, it, expect } from 'vitest';
 import { generateScale, defaultConfig } from '../src/generate';
 import { resolveLadderAnchorStep } from '../src/anchor-resolution';
-import { oklchOf } from '../src/locate';
+import { oklchOfHex } from '../src/gamut';
 import { wcagTargetFor } from '../src/targets';
 import { wcagRatio } from '../src/wcag';
 import { SCALE_STEPS, type Oklch, type ScaleStepNumber } from '../src/types';
 
 function engineOklch(hex: string): Oklch {
-  const c = oklchOf(hex);
+  const c = oklchOfHex(hex);
   return { l: c.l, c: c.c ?? 0, h: c.h ?? 0 };
 }
 
@@ -89,7 +89,7 @@ describe('ladder-aware anchor resolution', () => {
     const scale = generateScale(['#895af6', '#14b8a6'], { ...defaultConfig(), contrastMode: 'wcag' });
     const steps = scale.anchors!.map((a) => a.step);
     expect(new Set(steps).size).toBe(2);
-    const lights = scale.anchors!.map((a) => ({ step: a.step, l: oklchOf(a.hex).l }));
+    const lights = scale.anchors!.map((a) => ({ step: a.step, l: oklchOfHex(a.hex).l }));
     const sorted = [...lights].sort((x, y) => x.l - y.l);
     // ascending lightness must map to descending step numbers
     for (let i = 1; i < sorted.length; i++) {

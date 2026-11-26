@@ -1,38 +1,41 @@
-import { defaultConfig, familyById, MAX_ANCHORS, type ScaleConfig } from 'stripper';
+import { defaultConfig, familyById, MAX_ANCHORS, type ScaleConfig } from '@mountfx/stripper';
 
 export { MAX_ANCHORS };
 
-/** The configuration applied to the color schemes, per scheme. */
+/** One scheme's configuration, as exported in a config JSON. */
+export interface SchemeConfigExport {
+  /** the scheme name — drives token names in the other exports */
+  name: string;
+  /** active preset (Tailwind family id) — the scale is the exact family, not generated */
+  preset: string | null;
+  anchors: string[];
+  config: ScaleConfig;
+}
+
 export interface ConfigExportInput {
-  /** active per-scale preset (Tailwind family id) — the scale is the exact family, not generated */
-  preset: { primary: string | null; neutral: string | null };
-  primary: { anchors: string[]; config: ScaleConfig };
-  neutral: { anchors: string[]; config: ScaleConfig; tint: 'own' | 'primary' };
+  schemes: SchemeConfigExport[];
 }
 
 /** The studio state fields a config JSON restores (everything except `dark`). */
 export interface StudioConfigSnapshot {
-  primaryAnchors: string[];
-  neutralAnchors: string[];
-  primaryConfig: ScaleConfig;
-  neutralConfig: ScaleConfig;
-  neutralTint: 'own' | 'primary';
-  primaryPreset: string | null;
-  neutralPreset: string | null;
+  schemes: SchemeConfigExport[];
 }
 
 /**
- * JSON of the applied configuration — the recipe, not the tokens: anchors plus
- * the ScaleConfig each scheme was generated with (and the neutral tint rule).
- * A scheme whose preset is set renders the exact Tailwind family instead.
+ * JSON of the applied configuration — the recipe, not the tokens: per scheme
+ * the anchors plus the ScaleConfig it was generated with. A scheme whose
+ * preset is set renders the exact Tailwind family instead.
  */
 export function buildConfigJson(input: ConfigExportInput): string {
   return (
     JSON.stringify(
       {
-        primary: { anchors: input.primary.anchors, config: input.primary.config },
-        neutral: { anchors: input.neutral.anchors, config: input.neutral.config, tint: input.neutral.tint },
-        preset: input.preset,
+        schemes: input.schemes.map((scheme) => ({
+          name: scheme.name,
+          preset: scheme.preset,
+          anchors: scheme.anchors,
+          config: scheme.config,
+        })),
       },
       null,
       2,
@@ -79,11 +82,15 @@ function sanitizePreset(raw: unknown): string | null {
   return typeof raw === 'string' && familyById(raw) ? raw : null;
 }
 
+function sanitizeName(raw: unknown, index: number): string {
+  return typeof raw === 'string' ? raw.trim() || `scheme${index + 1}` : `scheme${index + 1}`;
+}
+
 /**
  * Parse a config JSON (the export of {@link buildConfigJson}) back into studio
- * state fields. Unknown/invalid values fall back to their defaults; unknown
- * preset ids resolve to null (generated scales). Returns null when the file
- * does not contain usable anchors for both scales.
+ * state schemes. Unknown/invalid values fall back to their defaults; unknown
+ * preset ids resolve to null (generated scales); schemes without usable
+ * anchors are dropped. Returns null when no scheme is usable.
  */
 export function parseConfigJson(text: string): StudioConfigSnapshot | null {
   let parsed: unknown;
@@ -93,21 +100,20 @@ export function parseConfigJson(text: string): StudioConfigSnapshot | null {
     return null;
   }
   if (!parsed || typeof parsed !== 'object') return null;
-  const root = parsed as {
-    primary?: { anchors?: unknown; config?: unknown };
-    neutral?: { anchors?: unknown; config?: unknown; tint?: unknown };
-    preset?: { primary?: unknown; neutral?: unknown };
-  };
-  const primaryAnchors = sanitizeAnchors(root.primary?.anchors);
-  const neutralAnchors = sanitizeAnchors(root.neutral?.anchors);
-  if (!primaryAnchors || !neutralAnchors) return null;
-  return {
-    primaryAnchors,
-    neutralAnchors,
-    primaryConfig: sanitizeConfig(root.primary?.config),
-    neutralConfig: sanitizeConfig(root.neutral?.config),
-    neutralTint: root.neutral?.tint === 'primary' ? 'primary' : 'own',
-    primaryPreset: sanitizePreset(root.preset?.primary),
-    neutralPreset: sanitizePreset(root.preset?.neutral),
-  };
+  const root = parsed as { schemes?: unknown };
+  if (!Array.isArray(root.schemes)) return null;
+  const schemes: SchemeConfigExport[] = [];
+  root.schemes.forEach((raw, index) => {
+    if (!raw || typeof raw !== 'object') return;
+    const r = raw as { name?: unknown; preset?: unknown; anchors?: unknown; config?: unknown };
+    const anchors = sanitizeAnchors(r.anchors);
+    if (!anchors) return;
+    schemes.push({
+      name: sanitizeName(r.name, index),
+      preset: sanitizePreset(r.preset),
+      anchors,
+      config: sanitizeConfig(r.config),
+    });
+  });
+  return schemes.length > 0 ? { schemes } : null;
 }

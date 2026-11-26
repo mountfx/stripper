@@ -1,5 +1,5 @@
-import { type ScaleConfig, TAILWIND_FAMILIES } from 'stripper';
-import { MAX_ANCHORS, type NeutralTint, type ScaleKey } from '@/context/StudioState';
+import { type ScaleConfig, TAILWIND_FAMILIES } from '@mountfx/stripper';
+import { MAX_ANCHORS } from '@/context/StudioState';
 import { ColorPicker, ColorPickerContent, ColorPickerInput } from '@/components/reui/color-picker';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
@@ -25,33 +25,25 @@ const CONTRAST_MODE_ITEMS = [
   { value: 'wcag', label: 'Consistent WCAG 2.2 contrast' },
 ] as const;
 
-const NEUTRAL_TINT_ITEMS = [
-  { value: 'own', label: 'own (from brand color)' },
-  { value: 'primary', label: 'borrow from primary' },
-] as const;
-
 export interface ConfigPanelProps {
-  role: ScaleKey;
+  /** the owning scheme's id — scopes DOM ids/aria to this scheme */
+  schemeId: string;
   anchors: string[];
   config: ScaleConfig;
   preset: string | null;
-  neutralTint?: NeutralTint;
   onAnchorsChange(anchors: string[]): void;
   onConfigChange(config: ScaleConfig): void;
-  onNeutralTintChange?(tint: NeutralTint): void;
   onPresetChange(familyId: string | null): void;
   onReset(): void;
 }
 
 export function ConfigPanel({
-  role,
+  schemeId,
   anchors,
   config,
   preset,
-  neutralTint,
   onAnchorsChange,
   onConfigChange,
-  onNeutralTintChange,
   onPresetChange,
   onReset,
 }: ConfigPanelProps) {
@@ -88,7 +80,11 @@ export function ConfigPanel({
     <div className="space-y-4">
       <div className="space-y-1.5">
         <Label className="text-xs">Preset</Label>
-        <SelectRoot items={PRESET_ITEMS} value={preset} onValueChange={(value) => onPresetChange(value ?? null)}>
+        <SelectRoot
+          items={PRESET_ITEMS}
+          value={preset}
+          onValueChange={(value) => onPresetChange(value ?? null)}
+        >
           <SelectTrigger aria-label="Preset" className="w-full text-xs" />
           <SelectContent scrollArrows>
             <SelectItem value={null as string | null}>Custom</SelectItem>
@@ -108,7 +104,7 @@ export function ConfigPanel({
       </div>
 
       <div className="space-y-1.5">
-        <Label className="text-xs">Brand colors ({role})</Label>
+        <Label className="text-xs">Brand colors</Label>
         <div className="space-y-1.5">
           {anchors.map((hex, i) => (
             <div key={i} className="flex items-center gap-2">
@@ -144,8 +140,8 @@ export function ConfigPanel({
         )}
         {anchors.length > 1 && (
           <p className="text-[10px] leading-snug text-muted-foreground">
-            Multi-anchor: colors are placed by lightness and the scale transitions between them. Drift, tint and
-            Tailwind transfer do not apply.
+            Multi-anchor: colors are placed by lightness and the scale transitions between them. Drift and Tailwind
+            transfer do not apply.
           </p>
         )}
       </div>
@@ -182,11 +178,11 @@ export function ConfigPanel({
         {config.contrastMode !== 'none' ? (
           <div className="flex items-center gap-2">
             <Checkbox
-              id={`keep-${role}`}
+              id={`keep-${schemeId}`}
               checked={config.keepAnchorsExact === true}
               onCheckedChange={(value) => patch({ keepAnchorsExact: value === true })}
             />
-            <Label htmlFor={`keep-${role}`} className="text-xs font-normal">
+            <Label htmlFor={`keep-${schemeId}`} className="text-xs font-normal">
               Keep brand colors exact
             </Label>
           </div>
@@ -244,23 +240,6 @@ export function ConfigPanel({
           />
         </div>
       </div>
-
-      {role === 'neutral' && neutralTint && (
-        <div className="space-y-1.5">
-          <Label className="text-xs">Neutral tint hue</Label>
-          <SelectRoot
-            items={NEUTRAL_TINT_ITEMS}
-            value={neutralTint}
-            onValueChange={(value) => onNeutralTintChange?.(value as NeutralTint)}
-          >
-            <SelectTrigger aria-label="Neutral tint hue" className="w-full text-xs" />
-            <SelectContent>
-              <SelectItem value="own">own (from brand color)</SelectItem>
-              <SelectItem value="primary">borrow from primary</SelectItem>
-            </SelectContent>
-          </SelectRoot>
-        </div>
-      )}
 
       <Button
         variant="ghost"

@@ -10,6 +10,16 @@ the full scales. The engine is **role-agnostic** — which scale is "primary" or
 
 Everything is exported flat from the package root.
 
+## Install
+
+```sh
+npm install @mountfx/stripper
+```
+
+ESM-only, ships as a typed, self-contained `dist/` bundle (no runtime
+dependencies — the color math is bundled and pinned). Runs on Node ≥ 20 and in
+every modern bundler.
+
 ---
 
 ## Quick start
@@ -121,7 +131,7 @@ Rules:
   reproduced **exactly** at its step (with a contrast ladder active, lightness is
   contract-owned as usual).
 - Carve-outs for multi-anchor scales: the balanced skeleton is always used —
-  `tailwindTransfer`, hue `drift`/`offset` and hue `tint` do not apply (a warning
+  `tailwindTransfer`, hue `drift` and hue `tint` do not apply (a warning
   is emitted when they are configured). Chroma taper applies only outside the
   outermost anchors.
 - Caveat: distant hues can produce desaturated mid steps ("mud"); OKLCH
@@ -150,9 +160,11 @@ bg → negative. Range ≈ ±108.
 
 ```ts
 lc(text: string, background: string): number
+apcaLc(txtY: number, bgY: number): number   // the primitive on Y values
 lcBlackOn(background: string): number
 lcWhiteOn(background: string): number
 apcaLevel(lc: number): 90 | 75 | 60 | 45 | 30 | 15 | null   // APCA Readability Criterion levels
+APCA_LEVELS                                 // the level table: { min, label }
 displayY(r, g, b): number            // APCA screen luminance
 displayYof(color: string): number
 APCA_098G4G                          // the constant set
@@ -168,30 +180,24 @@ wcagRatio(text: string, background: string): number
 ratioOnBlack(background: string): number
 ratioOnWhite(background: string): number
 wcagLevel(ratio: number): 7 | 4.5 | 3 | null   // AAA / AA / large-text + non-text
+WCAG_LEVELS                                    // the level table: { min, label }
 wcagLuminance(r, g, b): number
 wcagLuminanceOf(color: string): number
-WCAG_LEVELS
 ```
+
+**Level functions are strict raw minimums** (`apcaLevel(59.999)` is 45, not 60):
+levels are judged on the actual contrast value, with no rounding. Reporting
+conventions (e.g. showing Lc as a rounded integer) are application-layer
+decisions.
 
 ### Inspection
 
 ```ts
-interface StepContrast {
-  step: number;
-  hex: string;
-  blackOnColor: number;   // Lc, black text on the color (positive)
-  whiteOnColor: number;   // Lc, white text on the color (negative)
-  colorOnBlack: number;   // Lc, color as text on black (negative)
-  colorOnWhite: number;   // Lc, color as text on white (positive)
-  ratioOnBlack: number;   // WCAG ratio, black text on the color
-  ratioOnWhite: number;   // WCAG ratio, white text on the color
-}
+criticalPairWarnings(scale: Scale): string[]
+// warnings for UI-critical pairings: white text on 600 (< 60 Lc), white on
+// 500 (< 45), black text on 100 (< 60)
 
-contrastMatrix(scale: Scale): StepContrast[]
-
-criticalPairWarnings(scale: Scale): { messages: string[] }
-// checks UI-critical pairings: white text on 600 (≥ 60 Lc), white on 500 (≥ 45),
-// black text on 100 (≥ 60)
+lc(text, background) / wcagRatio(text, background)   // any pair, see above
 ```
 
 ---
@@ -210,16 +216,22 @@ WCAG_CONTRAST_TARGETS: Record<ScaleStepNumber, { ratio: number; bg: 'black' | 'w
 targetFor(step): ApcaTarget
 wcagTargetFor(step): WcagTarget
 
-// diagnostics (power the studio's constraint overlays)
+// gamut diagnostics
 maxSrgbChroma(l, h): number
 // largest chroma at lightness l / hue h that stays inside sRGB
 
 displayableLightnessRange(c, h): { lo, hi } | null
 // the lightness interval for which oklch(l, c, h) exists in sRGB (null when none does)
 
-displayableHueRange(l, c, curveHue, dmin, dmax): { lo, hi }
-// the displayable hue arc at lightness l / chroma c within a window, bridged
-// to curveHue when the curve hue itself is out of gamut
+inSrgb(color: ColorInput): boolean
+// whether a color renders inside sRGB; ColorInput = CSS color string or a
+// color-space object like { mode: 'oklch', l, c, h }
+
+gamutClamp(ok: Oklch): Oklch          // reduce chroma (never L/H) until in sRGB
+stepToHex(ok: Oklch): string          // hex of an Oklch color (clamped)
+oklchOfHex(hex): Oklch, hslOfHex(hex) // color-space views of a hex string
+clampHue(h): number                   // normalize to 0..360
+lerp(a, b, t), lerpHue(a, b, t)       // linear + shortest-arc hue interpolation
 
 ladderBoundaryL(h, c, step, contrastMode, toleranceOverride?): { l: number; reachable: boolean }
 // the lightness at which the active ladder is met for a color of the given
@@ -228,6 +240,10 @@ ladderBoundaryL(h, c, step, contrastMode, toleranceOverride?): { l: number; reac
 // flagged `reachable: false`. `none` mode has no contract.
 // toleranceOverride (default: the mode's tolerance, ±2 Lc / ±0.1 ratio)
 // relaxes or zeroes the boundary edge (0 = exact target).
+
+CONTRAST_MODES                          // per-mode tolerance map (±2 Lc / ±0.1 ratio)
+solveLightnessFor(...), withinTolerance(...), resolveLadderAnchorStep(...)
+// lower-level ladder / anchor-placement internals, exported for advanced use
 ```
 
 These ladders are the system's contrast contract and are intentionally **not
@@ -245,7 +261,7 @@ toThemeCss(scales: Array<{ name: string; scale: Scale }>): string
 // @theme { --color-primary-500: oklch(60.1% 0.238 293.6); ... }  (Tailwind v4)
 
 toJson(scales): string        // JSON tokens incl. hex/oklch/hsl per step
-toColorsJson(scales): string  // minimal JSON: { primary: ["#..", ...], neutral: [...] } (hex, step order)
+toColorsJson(scales): string  // minimal JSON: { "<name>": ["#..", ...] } per scale (hex, step order)
 oklchString(step): string     // "oklch(60.1% 0.238 293.6)"
 
 toSwiftUi(scales): string     // SwiftUI: extension Color { static let primary500 = Color(red: 0.6353, green: 0.5255, blue: 0.9922)  // #a286fd }
@@ -271,7 +287,7 @@ MAX_ANCHORS                // 4 — the multi-anchor cap enforced by generateSca
 
 // utilities
 pickClosestFamily(hex): { family, anchorStep }
-oklchOf(hex), hslOf(hex), toHex(color): string
+toHex(color): string          // normalize any parseable CSS color to #rrggbb
 stepIndex(step): number
 ```
 

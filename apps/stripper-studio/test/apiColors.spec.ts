@@ -41,24 +41,25 @@ describe('api/colors handler', () => {
     }
   });
 
-  it('derives scales from URL params', () => {
+  it('derives every scheme from URL params', () => {
     const res = mockRes();
-    handler(mockReq('https://studio.example/api/colors?p=%23895af6&n=%2371717a'), res);
+    handler(mockReq('https://studio.example/api/colors?s1=%23895af6&s2=%2371717a'), res);
     const fromParams = JSON.parse(res.body) as Record<string, string[]>;
     expect(res.statusCode).toBe(200);
-    expect(fromParams.primary).toHaveLength(11);
-    expect(fromParams.neutral).toHaveLength(11);
+    expect(Object.keys(fromParams).sort()).toEqual(['scheme1', 'scheme2']);
+    expect(fromParams.scheme1).toHaveLength(11);
+    expect(fromParams.scheme2).toHaveLength(11);
     // the anchor params actually change the output vs the default theme
     const resDefault = mockRes();
     handler(mockReq('https://studio.example/api/colors'), resDefault);
     const fromDefault = JSON.parse(resDefault.body) as Record<string, string[]>;
-    expect(fromParams.primary).not.toEqual(fromDefault.primary);
-    expect(fromParams.neutral).not.toEqual(fromDefault.neutral);
+    expect(fromParams.scheme1).not.toEqual(fromDefault.primary);
+    expect(fromParams.scheme2).not.toEqual(fromDefault.neutral);
   });
 
   it('serves the exact preset scale when a preset param is given', () => {
     const res = mockRes();
-    handler(mockReq('https://studio.example/api/colors?ppreset=violet'), res);
+    handler(mockReq('https://studio.example/api/colors?s1preset=violet&s1name=primary&s2=%2371717a&s2name=neutral'), res);
     const parsed = JSON.parse(res.body) as Record<string, string[]>;
     expect(parsed.primary).toEqual([
       '#f5f3ff',
@@ -75,9 +76,17 @@ describe('api/colors handler', () => {
     ]);
   });
 
+  it('serves more than two schemes', () => {
+    const res = mockRes();
+    handler(mockReq('https://studio.example/api/colors?s1=%23ff0000&s2=%2300ff00&s3=%230000ff&s3name=accent'), res);
+    const parsed = JSON.parse(res.body) as Record<string, string[]>;
+    expect(Object.keys(parsed).sort()).toEqual(['accent', 'scheme1', 'scheme2']);
+    for (const hexes of Object.values(parsed)) expect(hexes).toHaveLength(11);
+  });
+
   it('returns 400 with an error message for unparseable anchors', () => {
     const res = mockRes();
-    handler(mockReq('https://studio.example/api/colors?p=zzz'), res);
+    handler(mockReq('https://studio.example/api/colors?s1=zzz'), res);
     expect(res.statusCode).toBe(400);
     const parsed = JSON.parse(res.body) as { error: string };
     expect(parsed.error).toContain('Unparseable color');

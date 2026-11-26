@@ -1,9 +1,9 @@
 /**
- * GET /api/colors — the studio's color scales as JSON, derived from the same
+ * GET /api/colors — the studio's color schemes as JSON, derived from the same
  * URL params the studio app reads. Payload = the "Color JSON" export:
- * { "primary": ["#..", ...], "neutral": ["#..", ...] } in step order.
+ * { "<scheme>": ["#..", ...], ... } in step order, one entry per scheme.
  *
- * Example: /api/colors?p=%23895af6&n=%23a49aa8 — any shared studio link works.
+ * Example: /api/colors?s1=%23895af6&s2=%23a49aa8 — any shared studio link works.
  */
 
 /** Minimal structural types for the Vercel Node req/res shape. */

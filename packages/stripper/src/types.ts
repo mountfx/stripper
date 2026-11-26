@@ -61,6 +61,12 @@ export interface Oklch {
   h: number;
 }
 
+/**
+ * A color accepted by the inspection utilities: a CSS color string, or a
+ * color-space object like `{ mode: 'oklch', l, c, h }`.
+ */
+export type ColorInput = string | { mode: string; [key: string]: unknown };
+
 export interface Hsl {
   h: number;
   s: number;

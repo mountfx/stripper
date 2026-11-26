@@ -37,4 +37,12 @@ describe('WCAG 2.2 contrast', () => {
     expect(wcagLevel(2.9)).toBeNull();
     expect(WCAG_LEVELS.map((l) => l.min)).toEqual([7, 4.5, 3]);
   });
+
+  it('level thresholds are strict minimums — no rounding of the ratio', () => {
+    expect(wcagLevel(4.499)).toBe(3);
+    expect(wcagLevel(4.5)).toBe(4.5);
+    expect(wcagLevel(4.51)).toBe(4.5);
+    expect(wcagLevel(6.999)).toBe(4.5);
+    expect(wcagLevel(7)).toBe(7);
+  });
 });

@@ -7,7 +7,7 @@ export default defineConfig({
   plugins: [react()],
   resolve: {
     alias: {
-      'stripper': path.resolve(__dirname, '../../packages/stripper/src/index.ts'),
+      '@mountfx/stripper': path.resolve(__dirname, '../../packages/stripper/src/index.ts'),
       '@': fileURLToPath(new URL('./src', import.meta.url)),
     },
   },

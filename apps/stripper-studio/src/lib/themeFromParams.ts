@@ -8,32 +8,33 @@ import {
   defaultConfig,
   familyById,
   generateScale,
-  oklchOf,
   scaleFromFamily,
   type Scale,
   type ScaleConfig,
   type ThemeScales,
-} from 'stripper';
+} from '@mountfx/stripper';
 import { MAX_ANCHORS } from './configExport';
 
-/** App-layer role defaults: the engine default (balanced curve + consistent APCA contrast). */
+/** App-layer default: the engine default (balanced curve + consistent APCA contrast). */
 export const DEFAULTS: ScaleConfig = defaultConfig();
 
-export const DEFAULT_PRIMARY_ANCHOR = '#b766dc';
-export const DEFAULT_NEUTRAL_ANCHOR = '#a49aa8';
+export const DEFAULT_SCHEMES: Array<{ name: string; anchor: string }> = [
+  { name: 'primary', anchor: '#b766dc' },
+  { name: 'neutral', anchor: '#a49aa8' },
+];
 
-export type NeutralTint = 'own' | 'primary';
+/** A user-defined color scheme: named, with its own anchors, config and preset. */
+export interface SchemeParams {
+  name: string;
+  anchors: string[];
+  config: ScaleConfig;
+  /** active exact-preset Tailwind family (null = generated) */
+  preset: string | null;
+}
 
 /** The scale-independent state encoded in a studio URL (dark is UI chrome, handled by the app). */
 export interface StudioParams {
-  primaryAnchors: string[];
-  neutralAnchors: string[];
-  primaryConfig: ScaleConfig;
-  neutralConfig: ScaleConfig;
-  neutralTint: NeutralTint;
-  /** active exact-preset Tailwind family per scale (null = generated) */
-  primaryPreset: string | null;
-  neutralPreset: string | null;
+  schemes: SchemeParams[];
 }
 
 export interface ScaleResult {
@@ -55,20 +56,31 @@ export function migrateLegacyConfig(
   return rest;
 }
 
-function decodeConfig(param: string | null, fallback: ScaleConfig): ScaleConfig | null {
-  if (!param) return null;
+function decodeConfig(param: string | null): ScaleConfig {
+  if (!param) return { ...DEFAULTS };
   try {
     const parsed = JSON.parse(atob(param)) as Partial<ScaleConfig> & { consistentContrast?: boolean };
-    return { ...fallback, ...migrateLegacyConfig(parsed) };
+    return { ...DEFAULTS, ...migrateLegacyConfig(parsed) };
   } catch {
-    return null;
+    return { ...DEFAULTS };
   }
 }
 
-function anchorsFromUrl(q: URLSearchParams, first: string, extraPrefix: string): string[] {
+/** Token-safe scheme name, or null when nothing usable remains. */
+export function cleanSchemeName(raw: string | null): string | null {
+  const cleaned = (raw ?? '').trim().replace(/[^A-Za-z0-9_-]+/g, '-').replace(/^-+|-+$/g, '');
+  return cleaned || null;
+}
+
+/** Token-safe scheme name with an index fallback. */
+export function sanitizeName(raw: string | null, index: number): string {
+  return cleanSchemeName(raw) ?? `scheme${index + 1}`;
+}
+
+function anchorsFromUrl(q: URLSearchParams, first: string, prefix: string): string[] {
   const anchors = [first];
   for (let i = 2; i <= MAX_ANCHORS; i++) {
-    const extra = q.get(`${extraPrefix}${i}`);
+    const extra = q.get(`${prefix}_${i}`);
     if (extra) anchors.push(extra);
   }
   return anchors;
@@ -84,28 +96,47 @@ function presetAnchorHex(familyId: string | null): string | undefined {
   return familyId ? familyById(familyId)?.shades.find((shade) => shade.number === 500)?.hex : undefined;
 }
 
+function schemeCount(q: URLSearchParams): number {
+  let count = 0;
+  while (q.has(`s${count + 1}`) || q.has(`s${count + 1}preset`)) count++;
+  return count;
+}
+
+/** Anchor fallback chain: explicit param, then the preset's 500 shade, then the default anchor. */
+function firstAnchor(q: URLSearchParams, prefix: string, preset: string | null, index: number): string {
+  return q.get(prefix) ?? presetAnchorHex(preset) ?? DEFAULT_SCHEMES[index]?.anchor ?? '#888888';
+}
+
 /**
  * Derive the full param state from a studio URL query. Absent params fall
- * back to defaults; anchors fall back to the active preset's 500 shade so
- * URL-only presets stay self-consistent.
+ * back to the default schemes; anchors fall back to the active preset's 500
+ * shade so URL-only presets stay self-consistent.
  */
 export function stateFromParams(q: URLSearchParams): StudioParams {
-  const primaryPreset = q.has('ppreset') ? presetFromUrl(q, 'ppreset') : null;
-  const neutralPreset = q.has('npreset') ? presetFromUrl(q, 'npreset') : null;
-  const p = q.get('p');
-  const n = q.get('n');
-  const pcfg = decodeConfig(q.get('pcfg'), DEFAULTS);
-  const ncfg = decodeConfig(q.get('ncfg'), DEFAULTS);
-  const tint = q.get('ntint');
-  return {
-    primaryAnchors: p ? anchorsFromUrl(q, p, 'p') : [presetAnchorHex(primaryPreset) ?? DEFAULT_PRIMARY_ANCHOR],
-    neutralAnchors: n ? anchorsFromUrl(q, n, 'n') : [presetAnchorHex(neutralPreset) ?? DEFAULT_NEUTRAL_ANCHOR],
-    primaryConfig: pcfg ?? { ...DEFAULTS },
-    neutralConfig: ncfg ?? { ...DEFAULTS },
-    neutralTint: tint === 'own' || tint === 'primary' ? tint : 'own',
-    primaryPreset,
-    neutralPreset,
-  };
+  const count = schemeCount(q);
+  if (count === 0) {
+    return {
+      schemes: DEFAULT_SCHEMES.map(({ name, anchor }) => ({
+        name,
+        anchors: [anchor],
+        config: { ...DEFAULTS },
+        preset: null,
+      })),
+    };
+  }
+  const schemes: SchemeParams[] = [];
+  for (let i = 0; i < count; i++) {
+    const prefix = `s${i + 1}`;
+    const preset = presetFromUrl(q, `${prefix}preset`);
+    const first = firstAnchor(q, prefix, preset, i);
+    schemes.push({
+      name: sanitizeName(q.get(`${prefix}name`), i),
+      anchors: [first, ...anchorsFromUrl(q, first, prefix).slice(1)],
+      config: decodeConfig(q.get(`${prefix}cfg`)),
+      preset,
+    });
+  }
+  return { schemes };
 }
 
 /**
@@ -117,21 +148,20 @@ export function paramsFromState(
   state: StudioParams & { dark?: boolean },
 ): URLSearchParams {
   const q = new URLSearchParams();
-  q.set('p', state.primaryAnchors[0]!);
-  state.primaryAnchors.slice(1).forEach((hex, i) => q.set(`p${i + 2}`, hex));
-  q.set('n', state.neutralAnchors[0]!);
-  state.neutralAnchors.slice(1).forEach((hex, i) => q.set(`n${i + 2}`, hex));
-  q.set('pcfg', btoa(JSON.stringify(state.primaryConfig)));
-  q.set('ncfg', btoa(JSON.stringify(state.neutralConfig)));
-  q.set('ntint', state.neutralTint);
+  state.schemes.forEach((scheme, i) => {
+    const prefix = `s${i + 1}`;
+    q.set(prefix, scheme.anchors[0]!);
+    scheme.anchors.slice(1).forEach((hex, k) => q.set(`${prefix}_${k + 2}`, hex));
+    q.set(`${prefix}cfg`, btoa(JSON.stringify(scheme.config)));
+    if (scheme.preset) q.set(`${prefix}preset`, scheme.preset);
+    q.set(`${prefix}name`, scheme.name);
+  });
   if (state.dark) q.set('dark', '1');
-  if (state.primaryPreset) q.set('ppreset', state.primaryPreset);
-  if (state.neutralPreset) q.set('npreset', state.neutralPreset);
   return q;
 }
 
-/** Primary scale: exact-preset family short-circuit, then generated from anchors. */
-export function generatePrimary(params: {
+/** One color scheme: exact-preset family short-circuit, then generated from anchors. */
+export function generateScheme(params: {
   preset: string | null;
   anchors: string[];
   config: ScaleConfig;
@@ -147,39 +177,8 @@ export function generatePrimary(params: {
   }
 }
 
-/** Neutral scale: preset short-circuit, then tint borrow from the primary anchor. */
-export function generateNeutral(params: {
-  preset: string | null;
-  anchors: string[];
-  config: ScaleConfig;
-  tint: NeutralTint;
-  primaryAnchors: string[];
-}): ScaleResult {
-  if (params.preset) {
-    const family = familyById(params.preset);
-    if (family) return { scale: scaleFromFamily(family), error: null };
-  }
-  let config = params.config;
-  // tint only applies to single-anchor scales (carve-out)
-  if (params.tint === 'primary' && params.anchors.length === 1) {
-    try {
-      const primaryHue = oklchOf(params.primaryAnchors[0]!).h;
-      if (Number.isFinite(primaryHue)) {
-        config = { ...config, hue: { ...config.hue, tint: primaryHue } };
-      }
-    } catch {
-      // unparseable primary anchor: skip tint (URL junk is sanitized upstream)
-    }
-  }
-  try {
-    return { scale: generateScale(params.anchors, config), error: null };
-  } catch (e) {
-    return { scale: null, error: e instanceof Error ? e.message : String(e) };
-  }
-}
-
 export interface ThemeResult {
-  /** the two scales in role order, or null when generation failed */
+  /** one scale per scheme in order, or null when any generation failed */
   scales: ThemeScales | null;
   error: string | null;
 }
@@ -187,22 +186,13 @@ export interface ThemeResult {
 /** Derive the color scales from a studio URL query — the same derivation the studio UI performs. */
 export function themeFromParams(q: URLSearchParams): ThemeResult {
   const p = stateFromParams(q);
-  const primary = generatePrimary({ preset: p.primaryPreset, anchors: p.primaryAnchors, config: p.primaryConfig });
-  const neutral = generateNeutral({
-    preset: p.neutralPreset,
-    anchors: p.neutralAnchors,
-    config: p.neutralConfig,
-    tint: p.neutralTint,
-    primaryAnchors: p.primaryAnchors,
-  });
-  if (primary.scale && neutral.scale) {
+  const results = p.schemes.map((scheme) => generateScheme(scheme));
+  const failed = results.findIndex((r) => !r.scale);
+  if (failed === -1) {
     return {
-      scales: [
-        { name: 'primary', scale: primary.scale },
-        { name: 'neutral', scale: neutral.scale },
-      ],
+      scales: p.schemes.map((scheme, i) => ({ name: scheme.name, scale: results[i]!.scale! })),
       error: null,
     };
   }
-  return { scales: null, error: primary.error ?? neutral.error ?? 'invalid params' };
+  return { scales: null, error: results[failed]!.error ?? 'invalid params' };
 }

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { APCA_LEVELS, WCAG_LEVELS, apcaLevel, lc, wcagLevel, wcagRatio, type Scale } from 'stripper';
+import { APCA_LEVELS, WCAG_LEVELS, apcaLevel, lc, wcagLevel, wcagRatio, type Scale } from '@mountfx/stripper';
 import { Tooltip } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 
@@ -66,26 +66,52 @@ export function ContrastMatrix({ scale }: { scale: Scale | null }) {
     })),
   );
 
+  /**
+   * The reported Lc: rounded to the nearest integer on the magnitude, the
+   * convention APCA tooling uses for reporting. Thresholds (pill visibility,
+   * displayed value, level text) are all judged on the reported value — so a
+   * cell that reads "-60" never toggles at the 60+ pill while its number
+   * stays put. This is coherent with the generator's own ±2 Lc tolerance;
+   * the engine's `apcaLevel` remains the strict raw-value reference.
+   */
+  function reportedLc(v: number): number {
+    return (v < 0 ? -1 : 1) * Math.round(Math.abs(v));
+  }
+
+  /**
+   * The reported WCAG ratio: rounded to one decimal. Thresholds (pill
+   * visibility, displayed value, level text) are all judged on the reported
+   * value — a cell that reads "4.5" never toggles at the 4.5+ pill while its
+   * number stays put. Same reporting convention as `reportedLc`; the engine's
+   * `wcagLevel` remains the strict raw-value reference.
+   */
+  function reportedRatio(v: number): number {
+    return Math.round(v * 10) / 10;
+  }
+
   function passes(cell: Cell): boolean {
     if (contrastType === 'apca') {
-      return cell.apca >= filteredLc || cell.apca <= -filteredLc;
+      // dual form so the "All" pill (0) still shows everything, including
+      // negative-Lc cells
+      const reported = reportedLc(cell.apca);
+      return reported >= filteredLc || reported <= -filteredLc;
     }
-    return cell.wcag >= filteredRatio;
+    return reportedRatio(cell.wcag) >= filteredRatio;
   }
 
   function cellValue(cell: Cell): string {
-    if (contrastType === 'apca') return String(Math.round(cell.apca));
-    return String(Math.round(cell.wcag * 10) / 10);
+    if (contrastType === 'apca') return String(reportedLc(cell.apca));
+    return String(reportedRatio(cell.wcag));
   }
 
   function cellLevelText(cell: Cell): string {
     if (contrastType === 'apca') {
-      const level = apcaLevel(cell.apca);
+      const level = apcaLevel(reportedLc(cell.apca));
       if (level === null) return 'below Lc 15';
       const desc = APCA_LEVELS.find((l) => l.min === level)!.label;
       return `meets Lc ${level} — ${desc}`;
     }
-    const level = wcagLevel(cell.wcag);
+    const level = wcagLevel(reportedRatio(cell.wcag));
     if (level === null) return 'below 3:1';
     const desc = WCAG_LEVELS.find((l) => l.min === level)!.label;
     return `meets ${level}:1 — ${desc}`;
@@ -210,7 +236,7 @@ export function ContrastMatrix({ scale }: { scale: Scale | null }) {
         </table>
       </div>
       <p className="text-[11px] text-muted-foreground">
-        Rows: text color · Columns: background color. Cells below the threshold are hidden.
+        Rows: text color · Columns: background color. Cells whose reported value is below the threshold are hidden.
       </p>
     </div>
   );

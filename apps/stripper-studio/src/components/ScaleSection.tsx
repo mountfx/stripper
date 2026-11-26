@@ -1,12 +1,12 @@
 import { memo } from 'react';
-import { criticalPairWarnings, familyById, type Scale } from 'stripper';
-import type { ScaleKey } from '@/context/StudioState';
+import { criticalPairWarnings, familyById, type Scale } from '@mountfx/stripper';
 import { ScaleStrip } from './ScaleStrip';
 import { ContrastMatrix } from './ContrastMatrix';
 import { CurveChart } from './CurveChart';
 
 export interface ScaleSectionProps {
-  role: ScaleKey;
+  /** the scheme's stable id — scopes swatch hover focus to this scheme */
+  schemeId: string;
   title: string;
   scale: Scale | null;
   error: string | null;
@@ -18,7 +18,7 @@ export interface ScaleSectionProps {
  * keeps its identity, so the entire main column skips re-rendering and the
  * expensive charts/matrix recompute only in the deferred (transition) pass.
  */
-export const ScaleSection = memo(function ScaleSection({ role, title, scale, error, preset }: ScaleSectionProps) {
+export const ScaleSection = memo(function ScaleSection({ schemeId, title, scale, error, preset }: ScaleSectionProps) {
   const warnings = scale ? [...scale.warnings, ...criticalPairWarnings(scale)] : [];
   const presetFamily = preset ? familyById(preset) : undefined;
 
@@ -43,16 +43,16 @@ export const ScaleSection = memo(function ScaleSection({ role, title, scale, err
           {error}
         </p>
       )}
-      <ScaleStrip scale={scale} scaleKey={role} />
+      <ScaleStrip scale={scale} scaleKey={schemeId} />
       {warnings.map((w) => (
         <p key={w} className="font-mono text-[11px] text-muted-foreground">
           ⚠ {w}
         </p>
       ))}
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-        <CurveChart scale={scale} metric="l" scaleKey={role} />
-        <CurveChart scale={scale} metric="c" scaleKey={role} />
-        <CurveChart scale={scale} metric="h" scaleKey={role} />
+        <CurveChart scale={scale} metric="l" scaleKey={schemeId} />
+        <CurveChart scale={scale} metric="c" scaleKey={schemeId} />
+        <CurveChart scale={scale} metric="h" scaleKey={schemeId} />
       </div>
       <ContrastMatrix scale={scale} />
     </section>

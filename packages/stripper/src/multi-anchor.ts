@@ -31,7 +31,7 @@ export function checkLightnessMonotonicity(steps: ScaleStep[], warnings: string[
  * anchors, hue interpolates shortest-arc and chroma follows a per-anchor
  * scaling factor `k = anchor.c / profile.c[anchorStep]` blended over the
  * balanced profile — which reproduces each anchor color exactly at its step.
- * Carve-outs: no tailwindTransfer, no hue drift/offset, no tint; chroma taper
+ * Carve-outs: no tailwindTransfer, no hue drift, no tint; chroma taper
  * applies only outside the outermost anchors.
  */
 /** Hard cap on brand colors in one scale; extras are truncated with a warning. */

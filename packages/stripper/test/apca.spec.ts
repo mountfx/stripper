@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 // apca-w3 is a dev-only oracle: it is never imported by engine source code.
 import { APCAcontrast, sRGBtoY } from 'apca-w3';
 import { lc, lcBlackOn, lcWhiteOn } from '../src/apca';
+import { apcaLevel } from '../src/contrast';
 
 const oracle = (txt: string, bg: string) => {
   const toY = (hex: string) => {
@@ -60,5 +61,16 @@ describe('APCA 0.0.98G-4g implementation', () => {
     expect(a).toBeLessThan(0);
     expect(b).toBeGreaterThan(0);
     expect(Math.abs(a)).not.toBeCloseTo(Math.abs(b), 1);
+  });
+
+  it('level thresholds are strict minimums — no rounding of Lc', () => {
+    // the Readability Criterion levels are minimums on the actual Lc value;
+    // a 59.999 pair meets Lc 45, not 60 — display code must not round up
+    expect(apcaLevel(59.999)).toBe(45);
+    expect(apcaLevel(60)).toBe(60);
+    expect(apcaLevel(60.001)).toBe(60);
+    expect(apcaLevel(-59.999)).toBe(45);
+    expect(apcaLevel(-60)).toBe(60);
+    expect(apcaLevel(59.5)).toBe(45);
   });
 });

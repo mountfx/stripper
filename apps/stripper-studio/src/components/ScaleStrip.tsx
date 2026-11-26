@@ -1,13 +1,14 @@
-import type { Scale } from 'stripper';
-import { oklchString } from 'stripper';
+import type { Scale } from '@mountfx/stripper';
+import { oklchString } from '@mountfx/stripper';
 import { useClipboard } from '@/hooks/useClipboard';
-import { useFocus, type ScaleKey } from '@/context/StudioState';
+import { useFocus } from '@/context/StudioState';
 import { Tooltip } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 
 interface ScaleStripProps {
   scale: Scale | null;
-  scaleKey: ScaleKey;
+  /** the owning scheme's id — scopes hover focus to this scheme */
+  scaleKey: string;
 }
 
 export function ScaleStrip({ scale, scaleKey }: ScaleStripProps) {
@@ -20,7 +21,7 @@ export function ScaleStrip({ scale, scaleKey }: ScaleStripProps) {
     <div className="flex h-24 overflow-hidden border border-border">
       {scale.steps.map((step) => {
         const dark = step.oklch.l < 0.62;
-        const focusedStep = focused?.key === scaleKey && focused.step === step.number;
+        const focusedStep = focused?.id === scaleKey && focused.step === step.number;
         const anchored = scale.anchors?.some((a) => a.step === step.number) ?? false;
         const textColor = dark ? 'rgba(255,255,255,0.6)' : 'rgba(0,0,0,0.55)';
         return (

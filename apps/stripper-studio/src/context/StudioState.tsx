@@ -14,34 +14,41 @@ import {
   TAILWIND_FAMILIES,
   type ScaleConfig,
   type ScaleStepNumber,
-} from 'stripper';
+} from '@mountfx/stripper';
 import { formatHex as culoriFormatHex } from 'culori';
-import { MAX_ANCHORS, parseConfigJson } from '@/lib/configExport';
+import { MAX_ANCHORS, parseConfigJson, type SchemeConfigExport } from '@/lib/configExport';
 import {
   DEFAULTS,
-  generateNeutral,
-  generatePrimary,
+  cleanSchemeName,
+  generateScheme,
   paramsFromState,
+  sanitizeName,
   stateFromParams,
-  type NeutralTint,
   type ScaleResult,
+  type SchemeParams,
 } from '@/lib/themeFromParams';
 
 export { MAX_ANCHORS };
-export type { NeutralTint };
 
-export type ScaleKey = 'primary' | 'neutral';
+/** A color scheme in studio state: identity + live editing fields. */
+export interface ColorScheme extends SchemeConfigExport {
+  /** stable identity for React keys and focus tracking (not user-visible) */
+  id: string;
+}
 
 export interface StudioState {
-  primaryAnchors: string[];
-  neutralAnchors: string[];
-  primaryConfig: ScaleConfig;
-  neutralConfig: ScaleConfig;
-  neutralTint: NeutralTint;
   dark: boolean;
-  /** active exact-preset Tailwind family per scale (null = generated) */
-  primaryPreset: string | null;
-  neutralPreset: string | null;
+  schemes: ColorScheme[];
+}
+
+let idCounter = 0;
+function nextId(): string {
+  idCounter += 1;
+  return `s-${Date.now().toString(36)}-${idCounter}`;
+}
+
+function toScheme(scheme: SchemeParams): ColorScheme {
+  return { id: nextId(), ...scheme };
 }
 
 export interface StudioContextValue {
@@ -52,98 +59,120 @@ export interface StudioContextValue {
    * updates (slider drags, hex inputs) stay instant.
    */
   deferredState: StudioState;
-  primaryResult: ScaleResult;
-  neutralResult: ScaleResult;
-  setAnchors(key: ScaleKey, anchors: string[]): void;
-  setConfig(key: ScaleKey, config: ScaleConfig): void;
-  setNeutralTint(tint: NeutralTint): void;
-  resetScale(key: ScaleKey): void;
-  /** exact-preset Tailwind family per scale; null reverts to generated scales (anchors kept) */
-  applyPreset(key: ScaleKey, familyId: string | null): void;
-  applyRandom(): void;
+  /** one generation result per scheme, same order as `state.schemes` */
+  results: Array<{ id: string; result: ScaleResult }>;
+  renameScheme(id: string, name: string): void;
+  setAnchors(id: string, anchors: string[]): void;
+  setConfig(id: string, config: ScaleConfig): void;
+  resetScale(id: string): void;
+  /** exact-preset Tailwind family per scheme; null reverts to generated (anchors kept) */
+  applyPreset(id: string, familyId: string | null): void;
+  /** random brand color for one scheme (preset cleared) */
+  randomScheme(id: string): void;
+  addScheme(): void;
+  /** delete a scheme; the last remaining scheme is never removed */
+  removeScheme(id: string): void;
   toggleDark(): void;
   /** restore a config JSON (the Config JSON export); returns false when the text is not a valid config */
   applyConfig(text: string): boolean;
 }
 
 export interface FocusContextValue {
-  /** the scale step (50–950) currently hovered within a scale — shared by strip and charts */
-  focused: { key: ScaleKey; step: ScaleStepNumber } | null;
-  setFocused(key: ScaleKey, step: ScaleStepNumber): void;
-  clearFocused(key: ScaleKey): void;
+  /** the scheme + scale step (50–950) currently hovered — shared by strip and charts */
+  focused: { id: string; step: ScaleStepNumber } | null;
+  setFocused(id: string, step: ScaleStepNumber): void;
+  clearFocused(id: string): void;
 }
 
 const StudioContext = createContext<StudioContextValue | null>(null);
 const FocusContext = createContext<FocusContextValue | null>(null);
 
+function patchScheme(schemes: ColorScheme[], id: string, patch: Partial<ColorScheme>): ColorScheme[] {
+  return schemes.map((scheme) => (scheme.id === id ? { ...scheme, ...patch } : scheme));
+}
+
 export function StudioProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<StudioState>(() => {
     const q = new URLSearchParams(window.location.search);
     const params = stateFromParams(q);
-    return { ...params, dark: q.get('dark') === '1' };
+    return { schemes: params.schemes.map(toScheme), dark: q.get('dark') === '1' };
   });
 
-  const [focused, setFocusedState] = useState<{ key: ScaleKey; step: ScaleStepNumber } | null>(null);
+  const [focused, setFocusedState] = useState<{ id: string; step: ScaleStepNumber } | null>(null);
 
   // expensive derived UI follows the deferred state at transition priority
   const deferredState = useDeferredValue(state);
 
-  const setAnchors = useCallback((key: ScaleKey, anchors: string[]) => {
-    setState((s) => ({
-      ...s,
-      [key === 'primary' ? 'primaryAnchors' : 'neutralAnchors']: anchors,
-      [key === 'primary' ? 'primaryPreset' : 'neutralPreset']: null,
-    }));
+  const renameScheme = useCallback((id: string, name: string) => {
+    setState((s) => {
+      const taken = new Set(s.schemes.filter((scheme) => scheme.id !== id).map((scheme) => scheme.name));
+      const base = cleanSchemeName(name);
+      if (!base) {
+        // empty name: first free schemeN
+        let k = 1;
+        while (taken.has(`scheme${k}`)) k++;
+        return { ...s, schemes: patchScheme(s.schemes, id, { name: `scheme${k}` }) };
+      }
+      let unique = base;
+      let n = 2;
+      while (taken.has(unique)) unique = `${base}-${n++}`;
+      return { ...s, schemes: patchScheme(s.schemes, id, { name: unique }) };
+    });
   }, []);
 
-  const setConfig = useCallback((key: ScaleKey, config: ScaleConfig) => {
-    setState((s) => ({
-      ...s,
-      [key === 'primary' ? 'primaryConfig' : 'neutralConfig']: config,
-      [key === 'primary' ? 'primaryPreset' : 'neutralPreset']: null,
-    }));
+  const setAnchors = useCallback((id: string, anchors: string[]) => {
+    setState((s) => ({ ...s, schemes: patchScheme(s.schemes, id, { anchors, preset: null }) }));
   }, []);
 
-  const setNeutralTint = useCallback((tint: NeutralTint) => {
-    setState((s) => ({ ...s, neutralTint: tint, neutralPreset: null }));
+  const setConfig = useCallback((id: string, config: ScaleConfig) => {
+    setState((s) => ({ ...s, schemes: patchScheme(s.schemes, id, { config, preset: null }) }));
   }, []);
 
-  const resetScale = useCallback((key: ScaleKey) => {
-    setState((s) => ({
-      ...s,
-      [key === 'primary' ? 'primaryConfig' : 'neutralConfig']: { ...DEFAULTS },
-      [key === 'primary' ? 'primaryPreset' : 'neutralPreset']: null,
-    }));
+  const resetScale = useCallback((id: string) => {
+    setState((s) => ({ ...s, schemes: patchScheme(s.schemes, id, { config: { ...DEFAULTS }, preset: null }) }));
   }, []);
 
-  const applyPreset = useCallback((key: ScaleKey, familyId: string | null) => {
+  const applyPreset = useCallback((id: string, familyId: string | null) => {
     setState((s) => {
       if (familyId === null) {
-        return { ...s, [key === 'primary' ? 'primaryPreset' : 'neutralPreset']: null };
+        return { ...s, schemes: patchScheme(s.schemes, id, { preset: null }) };
       }
       const family = familyById(familyId);
       if (!family) return s;
       const anchorHex = family.shades.find((shade) => shade.number === 500)!.hex;
-      return {
-        ...s,
-        [key === 'primary' ? 'primaryAnchors' : 'neutralAnchors']: [anchorHex],
-        [key === 'primary' ? 'primaryPreset' : 'neutralPreset']: familyId,
-      };
+      return { ...s, schemes: patchScheme(s.schemes, id, { anchors: [anchorHex], preset: familyId }) };
     });
   }, []);
 
-  const applyRandom = useCallback(() => {
+  const randomScheme = useCallback((id: string) => {
     setState((s) => {
       const hue = Math.floor(Math.random() * 360);
       const sat = 0.55 + Math.random() * 0.35;
       const light = 0.5 + Math.random() * 0.2;
+      const hex = culoriFormatHex({ mode: 'hsl', h: hue, s: sat, l: light }) ?? '#888888';
+      return { ...s, schemes: patchScheme(s.schemes, id, { anchors: [hex], preset: null }) };
+    });
+  }, []);
+
+  const addScheme = useCallback(() => {
+    setState((s) => {
+      const index = s.schemes.length;
+      const name = sanitizeName(null, index);
+      let unique = name;
+      const taken = new Set(s.schemes.map((scheme) => scheme.name));
+      let n = 2;
+      while (taken.has(unique)) unique = `${name}-${n++}`;
       return {
         ...s,
-        primaryAnchors: [culoriFormatHex({ mode: 'hsl', h: hue, s: sat, l: light }) ?? '#888888'],
-        neutralAnchors: [culoriFormatHex({ mode: 'hsl', h: hue, s: sat * 0.12, l: light }) ?? '#888888'],
-        primaryPreset: null,
-        neutralPreset: null,
+        schemes: [...s.schemes, { id: nextId(), name: unique, anchors: ['#888888'], config: { ...DEFAULTS }, preset: null }],
       };
+    });
+  }, []);
+
+  const removeScheme = useCallback((id: string) => {
+    setState((s) => {
+      if (s.schemes.length <= 1) return s;
+      return { ...s, schemes: s.schemes.filter((scheme) => scheme.id !== id) };
     });
   }, []);
 
@@ -154,44 +183,25 @@ export function StudioProvider({ children }: { children: ReactNode }) {
   const applyConfig = useCallback((text: string): boolean => {
     const parsed = parseConfigJson(text);
     if (!parsed) return false;
-    setState((s) => ({ ...s, ...parsed }));
+    setState((s) => ({ ...s, schemes: parsed.schemes.map(toScheme) }));
     return true;
   }, []);
 
-  const setFocused = useCallback((key: ScaleKey, step: ScaleStepNumber) => {
-    setFocusedState({ key, step });
+  const setFocused = useCallback((id: string, step: ScaleStepNumber) => {
+    setFocusedState({ id, step });
   }, []);
 
-  const clearFocused = useCallback((key: ScaleKey) => {
-    setFocusedState((current) => (current?.key === key ? null : current));
+  const clearFocused = useCallback((id: string) => {
+    setFocusedState((current) => (current?.id === id ? null : current));
   }, []);
 
-  const primaryResult = useMemo<ScaleResult>(
+  const results = useMemo<Array<{ id: string; result: ScaleResult }>>(
     () =>
-      generatePrimary({
-        preset: deferredState.primaryPreset,
-        anchors: deferredState.primaryAnchors,
-        config: deferredState.primaryConfig,
-      }),
-    [deferredState.primaryPreset, deferredState.primaryAnchors, deferredState.primaryConfig],
-  );
-
-  const neutralResult = useMemo<ScaleResult>(
-    () =>
-      generateNeutral({
-        preset: deferredState.neutralPreset,
-        anchors: deferredState.neutralAnchors,
-        config: deferredState.neutralConfig,
-        tint: deferredState.neutralTint,
-        primaryAnchors: deferredState.primaryAnchors,
-      }),
-    [
-      deferredState.neutralPreset,
-      deferredState.neutralAnchors,
-      deferredState.neutralConfig,
-      deferredState.neutralTint,
-      deferredState.primaryAnchors,
-    ],
+      deferredState.schemes.map((scheme) => ({
+        id: scheme.id,
+        result: generateScheme({ preset: scheme.preset, anchors: scheme.anchors, config: scheme.config }),
+      })),
+    [deferredState],
   );
 
   // ---- dark mode -----------------------------------------------------------------
@@ -207,7 +217,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
       return;
     }
     const timer = setTimeout(() => {
-      const q = paramsFromState(state);
+      const q = paramsFromState({ schemes: state.schemes, dark: state.dark });
       window.history.replaceState(null, '', `${window.location.pathname}?${q.toString()}`);
     }, 300);
     return () => clearTimeout(timer);
@@ -217,18 +227,19 @@ export function StudioProvider({ children }: { children: ReactNode }) {
     () => ({
       state,
       deferredState,
-      primaryResult,
-      neutralResult,
+      results,
+      renameScheme,
       setAnchors,
       setConfig,
-      setNeutralTint,
       resetScale,
       applyPreset,
-      applyRandom,
+      randomScheme,
+      addScheme,
+      removeScheme,
       toggleDark,
       applyConfig,
     }),
-    [state, deferredState, primaryResult, neutralResult, setAnchors, setConfig, setNeutralTint, resetScale, applyPreset, applyRandom, toggleDark, applyConfig],
+    [state, deferredState, results, renameScheme, setAnchors, setConfig, resetScale, applyPreset, randomScheme, addScheme, removeScheme, toggleDark, applyConfig],
   );
 
   const focusValue = useMemo<FocusContextValue>(

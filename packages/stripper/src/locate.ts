@@ -3,7 +3,6 @@ import { GRAY_FAMILY_NAMES, TAILWIND_FAMILIES } from './families';
 import type { ColorFamily } from './families';
 import type { ScaleStepNumber } from './types';
 
-const toOklch = converter('oklch');
 const toHsl = converter('hsl');
 const toLab = converter('lab');
 const toRgb = converter('rgb');
@@ -60,12 +59,6 @@ export function pickClosestFamily(inputHex: string): LocatedScale {
   });
 
   return { family: bestFamily, anchorStep: anchorShade.number as ScaleStepNumber };
-}
-
-/** OKLCH view of a color (hue/chroma coalesced to zero when achromatic). */
-export function oklchOf(hex: string) {
-  const c = toOklch(parse(hex)!);
-  return { l: c.l, c: c.c ?? 0, h: c.h ?? 0 };
 }
 
 /** Normalize any parseable CSS color to #rrggbb. */

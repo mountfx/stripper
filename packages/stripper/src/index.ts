@@ -5,7 +5,7 @@ export * from './families';
 export * from './targets';
 export * from './locate';
 export * from './generate';
-export { maxSrgbChroma, gamutClamp, stepToHex, oklchOfHex, hslOfHex, displayableLightnessRange, displayableHueRange, clampHue, lerp, lerpHue } from './gamut';
+export { maxSrgbChroma, gamutClamp, stepToHex, oklchOfHex, hslOfHex, displayableLightnessRange, clampHue, lerp, lerpHue, inSrgb } from './gamut';
 export { ladderBoundaryL, solveLightnessFor, withinTolerance, CONTRAST_MODES } from './ladder';
 export { resolveLadderAnchorStep } from './anchor-resolution';
 export { MAX_ANCHORS } from './multi-anchor';

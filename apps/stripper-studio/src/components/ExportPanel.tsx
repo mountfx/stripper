@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { toThemeCss, toColorsJson, toJson, toSwiftUi, toKotlin, type ThemeScales } from 'stripper';
+import { toThemeCss, toColorsJson, toJson, toSwiftUi, toKotlin, type ThemeScales } from '@mountfx/stripper';
 import { useStudio } from '@/context/StudioState';
 import { useClipboard } from '@/hooks/useClipboard';
 import { buildConfigJson } from '@/lib/configExport';
@@ -32,11 +32,7 @@ export function ExportPanel({ scales }: { scales: ThemeScales }) {
       colors: toColorsJson(scales),
       swift: toSwiftUi(scales),
       kotlin: toKotlin(scales),
-      config: buildConfigJson({
-        preset: { primary: deferredState.primaryPreset, neutral: deferredState.neutralPreset },
-        primary: { anchors: deferredState.primaryAnchors, config: deferredState.primaryConfig },
-        neutral: { anchors: deferredState.neutralAnchors, config: deferredState.neutralConfig, tint: deferredState.neutralTint },
-      }),
+      config: buildConfigJson({ schemes: deferredState.schemes }),
     }),
     [scales, deferredState],
   );
